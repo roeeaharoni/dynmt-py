@@ -1,7 +1,7 @@
 """Sequence to Sequence with Attention using dynet + minibatch support
 
 Usage:
-  dynet-seq2seq-attn.py [--dynet-mem MEM] [--input-dim=INPUT] [--hidden-dim=HIDDEN] [--epochs=EPOCHS]
+  dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--input-dim=INPUT] [--hidden-dim=HIDDEN] [--epochs=EPOCHS]
   [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION] [--batch-size=BATCH] [--beam-size=BEAM]
   [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE] [--gpu] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH
   DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
@@ -18,6 +18,7 @@ Arguments:
 Options:
   -h --help                     show this help message and exit
   --dynet-mem MEM               allocates MEM bytes for dynet
+  --dynet-gpu-ids IDS           GPU ids to use
   --input-dim=INPUT             input embeddings dimension
   --hidden-dim=HIDDEN           LSTM hidden layer dimension
   --epochs=EPOCHS               amount of training epochs
