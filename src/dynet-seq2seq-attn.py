@@ -103,20 +103,20 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     train_outputs, output_vocabulary = prepare_data.load_data(train_outputs_path, MAX_VOCAB_SIZE)
 
     # REMOVE
-    train_inputs = train_inputs[:10]
-    train_outputs = train_outputs[:10]
+    # train_inputs = train_inputs[:10]
+    # train_outputs = train_outputs[:10]
 
     dev_inputs, dev_in_vocab = prepare_data.load_data(dev_inputs_path, MAX_VOCAB_SIZE)
     dev_outputs, dev_out_vocab = prepare_data.load_data(dev_outputs_path, MAX_VOCAB_SIZE)
 
-    dev_inputs = dev_inputs[:10]
-    dev_outputs = dev_outputs[:10]
+    # dev_inputs = dev_inputs[:10]
+    # dev_outputs = dev_outputs[:10]
 
     test_inputs, test_in_vocab = prepare_data.load_data(test_inputs_path, MAX_VOCAB_SIZE)
     test_outputs, test_out_vocab = prepare_data.load_data(test_outputs_path, MAX_VOCAB_SIZE)
 
-    test_inputs = test_inputs[:10]
-    test_outputs = test_outputs[:10]
+    # test_inputs = test_inputs[:10]
+    # test_outputs = test_outputs[:10]
 
     # add unk symbols to vocabularies
     input_vocabulary.append(UNK)
