@@ -720,8 +720,8 @@ def evaluate_model(predicted_sequences, inputs, outputs, print_results=False):
             print 'gold output: {}'.format(enc_out)
             print 'prediction: {}\n'.format(enc_gold)
 
-        eval_predictions.append(enc_in)
-        eval_golds.append(enc_gold)
+        eval_predictions.append(enc_in.decode('utf8'))
+        eval_golds.append(enc_gold.decode('utf8'))
 
     bleu = common.evaluate_bleu(eval_golds, eval_predictions)
 
