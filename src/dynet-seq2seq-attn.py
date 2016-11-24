@@ -712,15 +712,15 @@ def evaluate_model(predicted_sequences, inputs, outputs, print_results=False):
 
         # create strings from sequences for debug prints and evaluation
         enc_in = ' '.join(input_seq).encode('utf8')
-        enc_out = ' '.join(output_seq).encode('utf8')
-        enc_gold = predicted_output.encode('utf8')
+        enc_gold = ' '.join(output_seq).encode('utf8')
+        enc_out = predicted_output.encode('utf8')
 
         if print_results:
             print 'input: {}'.format(enc_in)
-            print 'gold output: {}'.format(enc_out)
-            print 'prediction: {}\n'.format(enc_gold)
+            print 'gold output: {}'.format(enc_gold)
+            print 'prediction: {}\n'.format(enc_out)
 
-        eval_predictions.append(enc_in.decode('utf8'))
+        eval_predictions.append(enc_out.decode('utf8'))
         eval_golds.append(enc_gold.decode('utf8'))
 
     bleu = common.evaluate_bleu(eval_golds, eval_predictions)
