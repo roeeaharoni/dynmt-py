@@ -23,23 +23,22 @@ def write_results_files(hyper_params, train_inputs_path, train_outputs_path, dev
     predictions_path = output_file_path + '.predictions'
     with codecs.open(predictions_path, 'w', encoding='utf8') as predictions:
         for i, line in enumerate(final_results):
-            predictions.write(u'{}'.format(line))
+            predictions.write(u'{}\n'.format(line))
 
     return predictions_path
 
-
+# evaluates bleu over two lists of unicode strings (u'')
 def evaluate_bleu(gold, predictions):
 
     predictions_path = os.path.dirname(__file__) + '/predictions.tmp'
     gold_path = os.path.dirname(__file__) + '/gold.tmp'
     with codecs.open(predictions_path, 'w', encoding='utf8') as predictions_file:
         for i, line in enumerate(gold):
-            predictions_file.write(u'{}'.format(line))
+            predictions_file.write(u'{}\n'.format(line))
 
     with codecs.open(gold_path, 'w', encoding='utf8') as gold_file:
         for i, line in enumerate(predictions):
-            l = line.decode('utf8')
-            gold_file.write(l)
+            gold_file.write(u'{}\n'.format(line))
 
     bleu = evaluate_bleu_from_files(gold_path, predictions_path)
     os.remove(predictions_path)
