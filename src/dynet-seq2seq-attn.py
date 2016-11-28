@@ -349,6 +349,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
     best_train_epoch = 0
     patience = 0
     train_len = len(train_outputs)
+    dev_len = len(dev_inputs)
     train_bleu = -1
     epochs_x = []
     train_loss_y = []
@@ -394,7 +395,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
             avg_loss = total_loss / float(i * batch_size + e * train_len)
 
             if i % 10 == 0 and i > 0:
-                print 'went through {} batches out of {} ({} examples out of {})'.format(i, len(train_order),
+                print 'went through {} train batches out of {} ({} examples out of {})'.format(i, len(train_order),
                                                                                          i * batch_size, train_len)
 
         # epoch evaluation
@@ -430,6 +431,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
 
                 # get dev loss
                 total_dev_loss = 0
+                print 'computing dev loss...'
                 for i, batch_start_index in enumerate(dev_order, start=1):
 
                     # get dev batches
@@ -445,6 +447,12 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
                                               y2int)
 
                     total_dev_loss += loss.scalar_value()
+
+                    if i % 10 == 0 and i > 0:
+                        print 'went through {} dev batches out of {} ({} examples out of {})'.format(i,
+                                                                                                     len(train_order),
+                                                                                                     i * batch_size,
+                                                                                                     dev_len)
 
                 avg_dev_loss = total_dev_loss / float(len(dev_inputs))
                 if avg_dev_loss < best_avg_dev_loss:
