@@ -377,6 +377,8 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
             if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
                 continue
 
+            print 'batch seq len: ', len(batch_inputs[0])
+
             # compute batch loss
             loss = compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout,
                                       bias, w_c, w_a, u_a, v_a, batch_inputs, batch_outputs, x2int, y2int)
