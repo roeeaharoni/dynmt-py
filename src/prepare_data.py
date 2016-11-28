@@ -2,7 +2,7 @@ import codecs
 import spacy
 from collections import Counter
 
-def load_data(path, vocab_size):
+def load_data(path, vocab_size, max_seq_len = 999):
 
     # print 'loading preprocessing model...'
     # nlp = spacy.load('en')
@@ -36,7 +36,10 @@ def load_data(path, vocab_size):
             total_len += seq_len
             if seq_len > max_len:
                 max_len = seq_len
-            tokenized.append(tokens)
+
+            # trim too long sequences
+            trimmed = tokens[:max_seq_len]
+            tokenized.append(trimmed)
             vocab += tokens
         print 'max len is {}, avg len is {}'.format(max_len, total_len/float(amount))
 
