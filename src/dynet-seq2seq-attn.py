@@ -45,7 +45,6 @@ import time
 import os
 import common
 
-
 from matplotlib import pyplot as plt
 from docopt import docopt
 from collections import defaultdict
@@ -373,8 +372,8 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
         for i, batch_start_index in enumerate(train_order, start=1):
 
             # get batch examples
-            batch_inputs = [x[0] for x in train_data[batch_start_index:batch_start_index+batch_size]]
-            batch_outputs = [x[1] for x in train_data[batch_start_index:batch_start_index+batch_size]]
+            batch_inputs = [x[0] for x in train_data[batch_start_index:batch_start_index + batch_size]]
+            batch_outputs = [x[1] for x in train_data[batch_start_index:batch_start_index + batch_size]]
 
             # skip empty batch
             if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
@@ -396,7 +395,8 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
 
             if i % 10 == 0 and i > 0:
                 print 'went through {} train batches out of {} ({} examples out of {})'.format(i, len(train_order),
-                                                                                         i * batch_size, train_len)
+                                                                                               i * batch_size,
+                                                                                               train_len)
 
         # epoch evaluation
         if EARLY_STOPPING:
@@ -545,7 +545,6 @@ def log_to_file(file_name, epoch, avg_loss, train_accuracy, dev_accuracy):
 
 def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout, bias, w_c, w_a,
                        u_a, v_a, input_batch_seqs, output_batch_seqs, x2int, y2int):
-
     # renew computation graph per batch
     dn.renew_cg()
 
@@ -584,7 +583,6 @@ def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, ou
 
     # run the decoder through the output sequences and aggregate loss
     for i, step_word_ids in enumerate(output_word_ids):
-
         # returns h x batch size matrix
         decoder_rnn_output = s.output()
 
@@ -724,7 +722,6 @@ def predict_output_sequence(encoder_frnn, encoder_rrnn, decoder_rnn, input_looku
 
 # Luong-style attention mechanism:
 def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
-
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
 
     # iterate through input states to compute attention scores
