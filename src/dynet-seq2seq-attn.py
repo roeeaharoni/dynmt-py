@@ -64,6 +64,7 @@ LEARNING_RATE = 0.0001  # 0.1
 BEAM_WIDTH = 5
 MAX_VOCAB_SIZE = 30000
 BATCH_SIZE = 1
+MAX_SEQ_LEN = 50
 
 # consts
 UNK = 'UNK'
@@ -92,6 +93,7 @@ END_SEQ = '</s>'
 # TODO: add multi-checkpoint support
 # TODO: data preproc with moses scripts?
 # TODO: make OOP refactoring
+# TODO: find better value for max seq len
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
@@ -109,14 +111,14 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         print param + '=' + str(hyper_params[param])
 
     # load train, dev and test data
-    train_inputs, input_vocabulary = prepare_data.load_data(train_inputs_path, vocab)
-    train_outputs, output_vocabulary = prepare_data.load_data(train_outputs_path, vocab)
+    train_inputs, input_vocabulary = prepare_data.load_data(train_inputs_path, vocab, MAX_SEQ_LEN)
+    train_outputs, output_vocabulary = prepare_data.load_data(train_outputs_path, vocab, MAX_SEQ_LEN)
 
-    dev_inputs, dev_in_vocab = prepare_data.load_data(dev_inputs_path, vocab)
-    dev_outputs, dev_out_vocab = prepare_data.load_data(dev_outputs_path, vocab)
+    dev_inputs, dev_in_vocab = prepare_data.load_data(dev_inputs_path, vocab, MAX_SEQ_LEN)
+    dev_outputs, dev_out_vocab = prepare_data.load_data(dev_outputs_path, vocab, MAX_SEQ_LEN)
 
-    test_inputs, test_in_vocab = prepare_data.load_data(test_inputs_path, vocab)
-    test_outputs, test_out_vocab = prepare_data.load_data(test_outputs_path, vocab)
+    test_inputs, test_in_vocab = prepare_data.load_data(test_inputs_path, vocab, MAX_SEQ_LEN)
+    test_outputs, test_out_vocab = prepare_data.load_data(test_outputs_path, vocab, MAX_SEQ_LEN)
 
     # TODO: remove
     # train_inputs = train_inputs[:100]
@@ -377,7 +379,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
             if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
                 continue
 
-            print 'batch seq len: ', len(batch_inputs[0])
+            # print 'batch seq len: ', len(batch_inputs[0])
 
             # compute batch loss
             loss = compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout,
