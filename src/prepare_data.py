@@ -23,18 +23,22 @@ def load_data(path, vocab_size):
 
     tokenized = []
     vocab = []
+    total_len = 0
+    max_len = 0
+    amount = 0
     print 'loading data from file:', path
     with codecs.open(path, encoding='utf8') as f:
         print 'tokenizing...'
-        # i = 0
         for line in f:
-            # tokens = nlp(line)
             tokens = line.split()
+            amount += 1
+            seq_len = len(tokens)
+            total_len += seq_len
+            if seq_len > max_len:
+                max_len = seq_len
             tokenized.append(tokens)
             vocab += tokens
-            # i += 1
-            # if i % 100 == 0:
-            #     print 'processed {} lines'.format(i)
+        print 'max len is {}, avg len is {}'.format(max_len, total_len/float(amount))
 
     mcommon = [ite for ite, it in Counter(vocab).most_common(vocab_size)]
     return tokenized, list(set(mcommon))
