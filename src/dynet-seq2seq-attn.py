@@ -64,6 +64,7 @@ BEAM_WIDTH = 5
 MAX_VOCAB_SIZE = 30000
 BATCH_SIZE = 1
 MAX_SEQ_LEN = 50
+EVAL_AFTER = 1000
 
 # consts
 UNK = 'UNK'
@@ -76,23 +77,28 @@ END_SEQ = '</s>'
 # debug on cpu - DONE
 # moses BLEU evaluation - DONE
 # debug on gpu - DONE
-
 # minibatch support - DONE
 # sort inputs by length - DONE
 # divide into batches of batch size - DONE
 # compute loss for batch with attention - DONE
 # debug batching with toy example (chars to letters?) - DONE
-# TODO: debug batching on GPU
+# TODO: debug batching on GPU - In progress
 
-# TODO: debug with non english output
+# TODO: add multi-checkpoint support + save/evaluate model by checkpoints (every X batches)
+# evaluate model
+# save model
+# log
+# plot
+# all according to current checkpoint (checkpoint id is total batches)
+
+# TODO: make OOP refactoring
+# TODO: debug with non english output (reverse translation from en to heb will work)
 # TODO: do word lookup once in the training stage and not in each epoch
+# TODO: data preproc with better (moses?) scripts
 # TODO: add beamsearch support
 # TODO: add BPE support
 # TODO: add ensembling support (by interpolating probabilities)
-# TODO: add multi-checkpoint support
-# TODO: data preproc with moses scripts?
-# TODO: make OOP refactoring
-# TODO: find better value for max seq len
+# TODO: find better value for max seq len in the literature
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
@@ -323,7 +329,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
     train_order = [x * batch_size for x in range(len(train_data) / batch_size + 1)]
 
     # sort dev sentences by length in descending order
-    dev_data = zip(train_inputs, train_outputs)
+    dev_data = zip(dev_inputs, dev_outputs)
     dev_data.sort(key=lambda t: - len(t[0]))
     dev_order = [x * batch_size for x in range(len(dev_data) / batch_size + 1)]
 
@@ -341,7 +347,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
         trainer = dn.SimpleSGDTrainer(model)
 
     total_loss = 0
-    best_avg_dev_loss = 999
+    best_dev_loss = 999
     best_dev_bleu = -1
     best_train_bleu = -1
     best_dev_epoch = 0
@@ -355,8 +361,10 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
     dev_loss_y = []
     train_bleu_y = []
     dev_bleu_y = []
-    avg_loss = -1
+    avg_train_loss = -1
+    total_batches = 0
     e = 0
+    log_path = results_file_path + '_log.txt'
     # train_sanity_set_size = 100
 
     # progress bar init
@@ -371,6 +379,8 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
         # go through batches
         for i, batch_start_index in enumerate(train_order, start=1):
 
+            total_batches += 1
+
             # get batch examples
             batch_inputs = [x[0] for x in train_data[batch_start_index:batch_start_index + batch_size]]
             batch_outputs = [x[1] for x in train_data[batch_start_index:batch_start_index + batch_size]]
@@ -378,8 +388,6 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
             # skip empty batch
             if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
                 continue
-
-            # print 'batch seq len: ', len(batch_inputs[0])
 
             # compute batch loss
             loss = compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout,
@@ -391,32 +399,22 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
             trainer.update()
 
             # avg loss per sample
-            avg_loss = total_loss / float(i * batch_size + e * train_len)
+            avg_train_loss = total_loss / float(i * batch_size + e * train_len)
 
             if i % 10 == 0 and i > 0:
                 print 'went through {} train batches out of {} ({} examples out of {})'.format(i, len(train_order),
                                                                                                i * batch_size,
                                                                                                train_len)
 
-        # epoch evaluation
-        if EARLY_STOPPING:
-            print 'starting epoch evaluation'
+            if total_batches % EVAL_AFTER == 0:
+                # create checkpoint
+                print 'starting checkpoint evaluation'
+                dev_bleu, dev_loss = checkpoint_eval(batch_size, bias, decoder_rnn, dev_data, dev_inputs, dev_len,
+                                                           dev_order, dev_outputs, encoder_frnn, encoder_rrnn,
+                                                           input_lookup, int2y, output_lookup, readout, u_a, v_a, w_a,
+                                                           w_c, x2int, y2int)
 
-            dev_bleu = 0
-            avg_dev_loss = 0
-
-            if len(dev_inputs) > 0:
-
-                # TODO: could be more efficient - encoding the dev set twice (for predictions and loss)
-
-                print 'dev prediction:'
-                # get dev predictions
-                dev_predictions = predict_multiple_sequences(input_lookup, output_lookup, encoder_frnn, encoder_rrnn,
-                                                             decoder_rnn, readout, bias, w_c, w_a, u_a, v_a, x2int,
-                                                             y2int, int2y, dev_inputs)
-                print 'dev evaluation:'
-                # get dev accuracy
-                dev_bleu = evaluate_model(dev_predictions, dev_inputs, dev_outputs, print_results=True)[1]
+                log_to_file(log_path, e, total_batches, avg_train_loss, train_bleu, dev_bleu)
 
                 if dev_bleu >= best_dev_bleu:
                     best_dev_bleu = dev_bleu
@@ -429,40 +427,14 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
                 else:
                     patience += 1
 
-                # get dev loss
-                total_dev_loss = 0
-                print 'computing dev loss...'
-                for i, batch_start_index in enumerate(dev_order, start=1):
-
-                    # get dev batches
-                    batch_inputs = [x[0] for x in dev_data[batch_start_index:batch_start_index + batch_size]]
-                    batch_outputs = [x[1] for x in dev_data[batch_start_index:batch_start_index + batch_size]]
-
-                    # skip empty batches
-                    if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
-                        continue
-
-                    loss = compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup,
-                                              readout, bias, w_c, w_a, u_a, v_a, batch_inputs, batch_outputs, x2int,
-                                              y2int)
-
-                    total_dev_loss += loss.scalar_value()
-
-                    if i % 10 == 0 and i > 0:
-                        print 'went through {} dev batches out of {} ({} examples out of {})'.format(i,
-                                                                                                     len(train_order),
-                                                                                                     i * batch_size,
-                                                                                                     dev_len)
-
-                avg_dev_loss = total_dev_loss / float(len(dev_inputs))
-                if avg_dev_loss < best_avg_dev_loss:
-                    best_avg_dev_loss = avg_dev_loss
+                if dev_loss < best_dev_loss:
+                    best_dev_loss = dev_loss
 
                 print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
- best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
+            best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
                     e,
-                    avg_loss,
-                    avg_dev_loss,
+                    avg_train_loss,
+                    dev_loss,
                     dev_bleu,
                     train_bleu,
                     best_dev_bleu,
@@ -471,45 +443,54 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
                     best_dev_epoch,
                     best_train_epoch)
 
-                log_to_file(results_file_path + '_log.txt', e, avg_loss, train_bleu, dev_bleu)
+        # epoch evaluation
+        print 'starting epoch evaluation'
+        dev_bleu, dev_loss = checkpoint_eval(batch_size, bias, decoder_rnn, dev_data, dev_inputs, dev_len,
+                                                   dev_order, dev_outputs, encoder_frnn, encoder_rrnn, input_lookup,
+                                                   int2y, output_lookup, readout, u_a, v_a, w_a, w_c, x2int, y2int)
 
-                if patience == MAX_PATIENCE:
-                    print 'out of patience after {0} epochs'.format(str(e))
-                    train_progress_bar.finish()
-                    if plot:
-                        plt.cla()
-                    return model, e
-            else:
+        log_to_file(log_path, e, total_batches, avg_train_loss, train_bleu, dev_bleu)
 
-                # if no dev set is present, optimize on train set
-                print 'no dev set for early stopping, running all epochs until patience is reached on the train set'
+        if dev_bleu >= best_dev_bleu:
+            best_dev_bleu = dev_bleu
+            best_dev_epoch = e
 
-                if train_bleu > best_train_bleu:
-                    best_train_bleu = train_bleu
+            # save best model to disk
+            save_model(model, results_file_path)
+            print 'saved new best model'
+            patience = 0
+        else:
+            patience += 1
 
-                    # save best model to disk
-                    save_model(model, results_file_path)
-                    print 'saved new best model'
-                    patience = 0
-                else:
-                    patience += 1
+        if dev_loss < best_dev_loss:
+            best_dev_loss = dev_loss
 
-                print 'epoch: {0} train loss: {1:.4f} train bleu = {2:.4f} best train bleu: {3:.4f} \
-                patience = {4}'.format(e, avg_loss, train_bleu, best_train_bleu, patience)
+        print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
+best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
+            e,
+            avg_train_loss,
+            dev_loss,
+            dev_bleu,
+            train_bleu,
+            best_dev_bleu,
+            best_train_bleu,
+            patience,
+            best_dev_epoch,
+            best_train_epoch)
 
-                # patience was reached
-                if patience == MAX_PATIENCE:
-                    train_progress_bar.finish()
-                    if plot:
-                        plt.cla()
-                    return model, e
+        if patience == MAX_PATIENCE:
+            print 'out of patience after {0} epochs'.format(str(e))
+            train_progress_bar.finish()
+            if plot:
+                plt.cla()
+            return model, e
 
-            # update parameters for plotting before ending epoch loop
-            epochs_x.append(e)
-            train_bleu_y.append(train_bleu)
-            train_loss_y.append(avg_loss)
-            dev_loss_y.append(avg_dev_loss)
-            dev_bleu_y.append(dev_bleu)
+        # update parameters for plotting before ending epoch loop
+        epochs_x.append(e)
+        train_bleu_y.append(train_bleu)
+        train_loss_y.append(avg_train_loss)
+        dev_loss_y.append(dev_loss)
+        dev_bleu_y.append(dev_bleu)
 
         # finished epoch
         train_progress_bar.update(e)
@@ -526,21 +507,63 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
     train_progress_bar.finish()
     if plot:
         plt.cla()
-    print 'finished training. average loss: {} best epoch on dev: {} best epoch on train: {}'.format(str(avg_loss),
-                                                                                                     best_dev_epoch,
-                                                                                                     best_train_epoch)
+    print 'finished training. average loss: {} best epoch on dev: {} best epoch on train: {}'.format(
+        str(avg_train_loss),
+        best_dev_epoch,
+        best_train_epoch)
 
     return model, input_lookup, encoder_frnn, encoder_rrnn, decoder_rnn, readout, bias, w_c, w_a, u_a, v_a, e, \
            best_train_epoch
 
 
-def log_to_file(file_name, epoch, avg_loss, train_accuracy, dev_accuracy):
+def checkpoint_eval(batch_size, bias, decoder_rnn, dev_data, dev_inputs, dev_len, dev_order, dev_outputs, encoder_frnn,
+                    encoder_rrnn, input_lookup, int2y, output_lookup, readout, u_a, v_a, w_a, w_c, x2int, y2int):
+
+    # TODO: could be more efficient - now encoding the dev set twice (for predictions and loss)
+    print 'predicting on dev...'
+    # get dev predictions
+    dev_predictions = predict_multiple_sequences(input_lookup, output_lookup, encoder_frnn, encoder_rrnn,
+                                                 decoder_rnn, readout, bias, w_c, w_a, u_a, v_a, x2int,
+                                                 y2int, int2y, dev_inputs)
+    print 'calculating dev bleu...'
+    # get dev accuracy
+    dev_bleu = evaluate_model(dev_predictions, dev_inputs, dev_outputs, print_results=True)[1]
+
+    # get dev loss
+    print 'computing dev loss...'
+    total_dev_loss = 0
+    for i, batch_start_index in enumerate(dev_order, start=1):
+
+        # get dev batches
+        batch_inputs = [x[0] for x in dev_data[batch_start_index:batch_start_index + batch_size]]
+        batch_outputs = [x[1] for x in dev_data[batch_start_index:batch_start_index + batch_size]]
+
+        # skip empty batches
+        if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
+            continue
+
+        loss = compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout, bias,
+                                  w_c, w_a, u_a, v_a, batch_inputs, batch_outputs, x2int, y2int)
+
+        total_dev_loss += loss.scalar_value()
+
+        if i % 10 == 0 and i > 0:
+            print 'went through {} dev batches out of {} ({} examples out of {})'.format(i, len(dev_order),
+                                                                                         i * batch_size,
+                                                                                         dev_len)
+
+    avg_dev_loss = total_dev_loss / float(len(dev_inputs))
+
+    return dev_bleu, avg_dev_loss
+
+
+def log_to_file(file_name, epoch, total_updates, avg_loss, train_accuracy, dev_accuracy):
     # if first write, add headers
     if epoch == 0:
-        log_to_file(file_name, 'epoch', 'avg_loss', 'train_accuracy', 'dev_accuracy')
+        log_to_file(file_name, 'epoch', 'update', 'avg_loss', 'train_accuracy', 'dev_accuracy')
 
     with open(file_name, "a") as logfile:
-        logfile.write("{}\t{}\t{}\t{}\n".format(epoch, avg_loss, train_accuracy, dev_accuracy))
+        logfile.write("{}\t{}\t{}\t{}\t{}\n".format(epoch, total_updates, avg_loss, train_accuracy, dev_accuracy))
 
 
 def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout, bias, w_c, w_a,
