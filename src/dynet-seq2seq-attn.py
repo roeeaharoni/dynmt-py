@@ -3,9 +3,9 @@
 Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
   [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION] [--batch-size=BATCH]
-  [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE] [--gpu] [--vocab-size]
-  TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH
-  RESULTS_PATH...
+  [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE] [--gpu]
+  [--vocab-size=VOCAB] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH
+  TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
   TRAIN_INPUTS_PATH    train inputs path
@@ -33,7 +33,7 @@ Options:
   --batch-size=BATCH            batch size
   --beam-size=BEAM              beam size in beam search
   --gpu                         enable gpu support
-  --vocab-size                  vocabulary size
+  --vocab-size=VOCAB            vocabulary size
 """
 
 import numpy as np
