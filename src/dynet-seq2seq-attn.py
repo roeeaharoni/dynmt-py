@@ -98,7 +98,7 @@ END_SEQ = '</s>'
 # TODO: add beamsearch support
 # TODO: add BPE support
 # TODO: add ensembling support (by interpolating probabilities)
-# TODO: find better value for max seq len in the literature
+# TODO: find better value for max seq len in the literature (50/80 is standard, should remove longer)
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
@@ -414,7 +414,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
                                                            input_lookup, int2y, output_lookup, readout, u_a, v_a, w_a,
                                                            w_c, x2int, y2int)
 
-                log_to_file(log_path, e, total_batches, avg_train_loss, train_bleu, dev_bleu)
+                log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
 
                 if dev_bleu >= best_dev_bleu:
                     best_dev_bleu = dev_bleu
@@ -449,7 +449,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
                                                    dev_order, dev_outputs, encoder_frnn, encoder_rrnn, input_lookup,
                                                    int2y, output_lookup, readout, u_a, v_a, w_a, w_c, x2int, y2int)
 
-        log_to_file(log_path, e, total_batches, avg_train_loss, train_bleu, dev_bleu)
+        log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
 
         if dev_bleu >= best_dev_bleu:
             best_dev_bleu = dev_bleu
@@ -557,13 +557,15 @@ def checkpoint_eval(batch_size, bias, decoder_rnn, dev_data, dev_inputs, dev_len
     return dev_bleu, avg_dev_loss
 
 
-def log_to_file(file_name, epoch, total_updates, avg_loss, train_accuracy, dev_accuracy):
-    # if first write, add headers
+def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, train_accuracy, dev_accuracy):
+
+    # if first log, add headers
     if epoch == 0:
-        log_to_file(file_name, 'epoch', 'update', 'avg_loss', 'train_accuracy', 'dev_accuracy')
+        log_to_file(file_name, 'epoch', 'update', 'avg_train_loss', 'avg_dev_loss', 'train_accuracy', 'dev_accuracy')
 
     with open(file_name, "a") as logfile:
-        logfile.write("{}\t{}\t{}\t{}\t{}\n".format(epoch, total_updates, avg_loss, train_accuracy, dev_accuracy))
+        logfile.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(epoch, total_updates, train_loss, dev_loss, train_accuracy,
+                                                        dev_accuracy))
 
 
 def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout, bias, w_c, w_a,

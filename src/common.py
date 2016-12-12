@@ -33,11 +33,11 @@ def evaluate_bleu(gold, predictions):
     predictions_path = os.path.dirname(__file__) + '/predictions.tmp'
     gold_path = os.path.dirname(__file__) + '/gold.tmp'
     with codecs.open(predictions_path, 'w', encoding='utf8') as predictions_file:
-        for i, line in enumerate(gold):
+        for i, line in enumerate(predictions):
             predictions_file.write(u'{}\n'.format(line))
 
     with codecs.open(gold_path, 'w', encoding='utf8') as gold_file:
-        for i, line in enumerate(predictions):
+        for i, line in enumerate(gold):
             gold_file.write(u'{}\n'.format(line))
 
     bleu = evaluate_bleu_from_files(gold_path, predictions_path)
