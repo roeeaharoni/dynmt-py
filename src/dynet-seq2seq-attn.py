@@ -608,16 +608,17 @@ def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, ou
 
     # run the decoder through the output sequences and aggregate loss
     for i, step_word_ids in enumerate(output_word_ids):
+
         # returns h x batch size matrix
         decoder_rnn_output = s.output()
 
-        # compute attention vector for each sequence in the batch (returns 2h x batch size matrix)
+        # compute attention context vector for each sequence in the batch (returns 2h x batch size matrix)
         attention_output_vector, alphas = attend(blstm_outputs, decoder_rnn_output, w_c, v_a, w_a, u_a)
 
-        # compute output scores
+        # compute output scores (returns vocab_size x batch size matrix)
         h = readout * attention_output_vector + bias
 
-        # get batch loss
+        # get batch loss for this timestep
         batch_loss = dn.pickneglogsoftmax_batch(h, step_word_ids)
         losses.append(batch_loss)
 
@@ -634,7 +635,11 @@ def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, ou
 # get list of word ids per each timestep in the batch
 def get_batch_word_ids(batch_seqs, x2int):
     output_word_ids = []
-    max_seq_len = len(batch_seqs[0])
+    max_seq_len = 0
+    for seq in batch_seqs:
+        if len(seq) > max_seq_len:
+            max_seq_len = len(seq)
+    # max_seq_len = len(batch_seqs[0])
     for i in range(max_seq_len):
         output_word_ids.append([])
         for seq in batch_seqs:
