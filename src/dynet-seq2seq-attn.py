@@ -103,7 +103,7 @@ END_SEQ = '</s>'
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
-         override, eval_only, ensemble, batch_size, beam, vocab):
+         override, eval_only, ensemble, batch_size, beam_size, vocab_size):
     hyper_params = {'INPUT_DIM': input_dim, 'HIDDEN_DIM': hidden_dim, 'EPOCHS': epochs, 'LAYERS': layers,
                     'MAX_PREDICTION_LEN': MAX_PREDICTION_LEN, 'OPTIMIZATION': optimization, 'PATIENCE': MAX_PATIENCE,
                     'REGULARIZATION': regularization, 'LEARNING_RATE': learning_rate}
@@ -116,14 +116,16 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         print param + '=' + str(hyper_params[param])
 
     # load train, dev and test data
-    train_inputs, input_vocabulary = prepare_data.load_data(train_inputs_path, vocab, MAX_SEQ_LEN)
-    train_outputs, output_vocabulary = prepare_data.load_data(train_outputs_path, vocab, MAX_SEQ_LEN)
+    train_inputs, input_vocabulary, train_outputs, output_vocabulary = \
+        prepare_data.load_parallel_data(train_inputs_path, train_outputs_path, vocab_size, MAX_SEQ_LEN)
 
-    dev_inputs, dev_in_vocab = prepare_data.load_data(dev_inputs_path, vocab, MAX_SEQ_LEN)
-    dev_outputs, dev_out_vocab = prepare_data.load_data(dev_outputs_path, vocab, MAX_SEQ_LEN)
 
-    test_inputs, test_in_vocab = prepare_data.load_data(test_inputs_path, vocab, MAX_SEQ_LEN)
-    test_outputs, test_out_vocab = prepare_data.load_data(test_outputs_path, vocab, MAX_SEQ_LEN)
+    dev_inputs, dev_in_vocab, dev_outputs, dev_out_vocab  = \
+        prepare_data.load_parallel_data(dev_inputs_path, dev_outputs_path, vocab_size, MAX_SEQ_LEN)
+
+    test_inputs, test_in_vocab, test_outputs, test_out_vocab = \
+        prepare_data.load_parallel_data(test_inputs_path, test_outputs_path, vocab_size, MAX_SEQ_LEN)
+
 
     # TODO: remove
     # train_inputs = train_inputs[:100]
