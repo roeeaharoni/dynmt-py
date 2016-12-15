@@ -65,6 +65,7 @@ MAX_VOCAB_SIZE = 30000
 BATCH_SIZE = 1
 MAX_SEQ_LEN = 50
 EVAL_AFTER = 1000
+GRAD_CLIP = 5.0
 
 # consts
 UNK = 'UNK'
@@ -348,6 +349,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
     else:
         trainer = dn.SimpleSGDTrainer(model)
 
+    trainer.set_clip_threshold(GRAD_CLIP)
     total_loss = 0
     best_dev_loss = 999
     best_dev_bleu = -1
