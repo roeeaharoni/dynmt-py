@@ -588,11 +588,11 @@ def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, ou
 
     batch_size = len(input_batch_seqs)
 
-    print 'INPUTS:'
-    for c, inputz in enumerate(input_batch_seqs):
-        print u' '.join(inputz)
-        print u' '.join(output_batch_seqs[c])
-        print '\n'
+    # print 'INPUTS:'
+    # for c, inputz in enumerate(input_batch_seqs):
+    #     print u' '.join(inputz)
+    #     print u' '.join(output_batch_seqs[c])
+    #     print '\n'
 
     # encode batch with bilstm encoder: each element represents one step in time, and is a matrix of 2*h x batch size
     # for example, for sentence length of 12, blstm_outputs wil be: 12 x 2 x 100 x 16
