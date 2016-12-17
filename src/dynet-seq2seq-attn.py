@@ -395,7 +395,7 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
 
             # compute batch loss
             loss = compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout,
-                                      bias, w_c, w_a, u_a, v_a, batch_inputs*10, batch_outputs*10,
+                                      bias, w_c, w_a, u_a, v_a, batch_inputs, batch_outputs,
                                       x2int, y2int)
 
             # update parameters
