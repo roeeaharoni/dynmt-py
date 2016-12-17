@@ -395,7 +395,8 @@ def train_model(model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, 
 
             # compute batch loss
             loss = compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, output_lookup, readout,
-                                      bias, w_c, w_a, u_a, v_a, batch_inputs, batch_outputs, x2int, y2int)
+                                      bias, w_c, w_a, u_a, v_a, batch_inputs*10, batch_outputs*10,
+                                      x2int, y2int)
 
             # update parameters
             total_loss += loss.scalar_value()
@@ -587,7 +588,14 @@ def compute_batch_loss(encoder_frnn, encoder_rrnn, decoder_rnn, input_lookup, ou
 
     batch_size = len(input_batch_seqs)
 
-    # encode batch with bilstm encoder, each element is a matrix of 2*h x batch size
+    print 'INPUTS:'
+    for c, inputz in enumerate(input_batch_seqs):
+        print u' '.join(inputz)
+        print u' '.join(output_batch_seqs[c])
+        print '\n'
+
+    # encode batch with bilstm encoder: each element represents one step in time, and is a matrix of 2*h x batch size
+    # for example, for sentence length of 12, blstm_outputs wil be: 12 x 2 x 100 x 16
     blstm_outputs = batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_batch_seqs)
 
     # initialize the decoder rnn
