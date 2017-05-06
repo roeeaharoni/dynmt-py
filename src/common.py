@@ -41,8 +41,8 @@ def evaluate_bleu(gold, predictions):
             gold_file.write(u'{}\n'.format(line))
 
     bleu = evaluate_bleu_from_files(gold_path, predictions_path)
-    # os.remove(predictions_path)
-    # os.remove(gold_path)
+    os.remove(predictions_path)
+    os.remove(gold_path)
     return bleu
 
 

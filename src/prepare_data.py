@@ -2,6 +2,7 @@ import codecs
 import spacy
 from collections import Counter
 
+# preprocess the parallel data, return tokenized sequences and vocabularies
 def load_parallel_data(input_seqs_path, output_seqs_path, vocab_size, max_seq_len = 999):
 
     # print 'loading preprocessing model...'
@@ -34,10 +35,10 @@ def load_parallel_data(input_seqs_path, output_seqs_path, vocab_size, max_seq_le
     with codecs.open(output_seqs_path, encoding='utf8') as output_file:
         with codecs.open(input_seqs_path, encoding='utf8') as input_file:
 
-            print 'tokenizing...'
             input_file_lines = input_file.readlines()
             output_file_lines = output_file.readlines()
 
+            # split sequences by spaces
             for i in xrange(len(output_file_lines)):
                 input_seq = input_file_lines[i]
                 output_seq = output_file_lines[i]
@@ -70,6 +71,7 @@ def load_parallel_data(input_seqs_path, output_seqs_path, vocab_size, max_seq_le
             print 'max input len is {}, avg input len is {}'.format(max_input_len, total_input_len/float(amount))
             print 'max output len is {}, avg output len is {}'.format(max_output_len, total_output_len / float(amount))
 
+    # build a vocabulary from the most common symbols
     most_common_input = [ite for ite, it in Counter(input_vocab).most_common(vocab_size)]
     most_common_output = [ite for ite, it in Counter(output_vocab).most_common(vocab_size)]
     return tokenized_input_seqs, list(set(most_common_input)), tokenized_output_seqs, list(set(most_common_output))

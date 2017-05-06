@@ -1,4 +1,6 @@
-"""Sequence to Sequence with Attention using dynet + minibatch support
+"""
+
+Sequence to sequence learning with an attention mechanism implemented using dynet's python bindings.
 
 Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
@@ -92,23 +94,30 @@ END_SEQ = '</s>'
 # plot
 # all according to current checkpoint (checkpoint id is total batches)
 
-# TODO: make OOP refactoring
+# TODO: OOP refactoring
 # TODO: debug with non english output (reverse translation from en to heb will work)
 # TODO: do word lookup once in the training stage and not in each epoch
 # TODO: data preproc with better (moses?) scripts
 # TODO: add beamsearch support
-# TODO: add BPE support
-# TODO: add ensembling support (by interpolating probabilities)
-# TODO: find better value for max seq len in the literature (50/80 is standard, should remove longer)
+# TODO: BPE support
+# TODO: ensembling support (by interpolating probabilities)
+# TODO: find better value for max seq len in the literature (50 is standard in nmt/80 in moses clean)
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
          override, eval_only, ensemble, batch_size, beam_size, vocab_size):
-    hyper_params = {'INPUT_DIM': input_dim, 'HIDDEN_DIM': hidden_dim, 'EPOCHS': epochs, 'LAYERS': layers,
-                    'MAX_PREDICTION_LEN': MAX_PREDICTION_LEN, 'OPTIMIZATION': optimization, 'PATIENCE': MAX_PATIENCE,
-                    'REGULARIZATION': regularization, 'LEARNING_RATE': learning_rate}
+    hyper_params = {'INPUT_DIM': input_dim,
+                    'HIDDEN_DIM': hidden_dim,
+                    'EPOCHS': epochs,
+                    'LAYERS': layers,
+                    'MAX_PREDICTION_LEN': MAX_PREDICTION_LEN,
+                    'OPTIMIZATION': optimization,
+                    'PATIENCE': MAX_PATIENCE,
+                    'REGULARIZATION': regularization,
+                    'LEARNING_RATE': learning_rate}
 
+    # debug prints
     print 'train input path = {}'.format(str(train_inputs_path))
     print 'train output path = {}'.format(str(train_outputs_path))
     print 'test inputs path = {}'.format(str(test_inputs_path))
@@ -120,23 +129,11 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     train_inputs, input_vocabulary, train_outputs, output_vocabulary = \
         prepare_data.load_parallel_data(train_inputs_path, train_outputs_path, vocab_size, MAX_SEQ_LEN)
 
-
     dev_inputs, dev_in_vocab, dev_outputs, dev_out_vocab  = \
         prepare_data.load_parallel_data(dev_inputs_path, dev_outputs_path, vocab_size, MAX_SEQ_LEN)
 
     test_inputs, test_in_vocab, test_outputs, test_out_vocab = \
         prepare_data.load_parallel_data(test_inputs_path, test_outputs_path, vocab_size, MAX_SEQ_LEN)
-
-
-    # TODO: remove
-    # train_inputs = train_inputs[:100]
-    # train_outputs = train_outputs[:100]
-    #
-    # dev_inputs = dev_inputs[:100]
-    # dev_outputs = dev_outputs[:100]
-    #
-    # test_inputs = test_inputs[:100]
-    # test_outputs = test_outputs[:100]
 
     # add unk symbols to vocabularies
     input_vocabulary.append(UNK)
@@ -148,16 +145,18 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     output_vocabulary.append(BEGIN_SEQ)
     output_vocabulary.append(END_SEQ)
 
-    # element 2 int and int 2 element
+    # symbol 2 int and int 2 symbol
     x2int = dict(zip(input_vocabulary, range(0, len(input_vocabulary))))
-
     y2int = dict(zip(output_vocabulary, range(0, len(output_vocabulary))))
     int2y = {index: x for x, index in y2int.items()}
+
+    print 'input vocab size: {}'.format(len(x2int))
+    print 'output vocab size: {}'.format(len(y2int))
 
     # try to load existing model
     model_file_name = '{}_bestmodel.txt'.format(results_file_path)
     if os.path.isfile(model_file_name) and not override:
-        print '\nloading existing model from {}'.format(model_file_name)
+        print 'loading existing model from {}'.format(model_file_name)
         model, input_lookup, output_lookup, encoder_frnn, encoder_rrnn, decoder_rnn, readout, bias, w_c, w_a, u_a, v_a \
             = load_best_model(input_vocabulary, output_vocabulary, results_file_path, input_dim, hidden_dim, layers)
         print 'loaded existing model successfully'
@@ -179,6 +178,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     else:
         print 'skipped training, evaluating on test set...'
 
+    # evaluate using an ensemble
     if ensemble:
         # predict test set using ensemble majority
         predicted_sequences = predict_with_ensemble_majority(input_vocabulary, output_vocabulary, x2int, y2int,
