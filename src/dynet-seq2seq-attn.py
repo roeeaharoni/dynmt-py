@@ -5,7 +5,7 @@ Sequence to sequence learning with an attention mechanism implemented using dyne
 Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
   [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION] [--batch-size=BATCH]
-  [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE] [--gpu]
+  [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH
   TEST_OUTPUTS_PATH RESULTS_PATH...
 
@@ -34,7 +34,6 @@ Options:
   --ensemble=ENSEMBLE           ensemble model paths separated by a comma
   --batch-size=BATCH            batch size
   --beam-size=BEAM              beam size in beam search
-  --gpu                         enable gpu support
   --vocab-size=VOCAB            vocabulary size
 """
 
@@ -46,6 +45,7 @@ import datetime
 import time
 import os
 import common
+import dynet
 
 from matplotlib import pyplot as plt
 from docopt import docopt
@@ -937,13 +937,6 @@ if __name__ == '__main__':
         beam_param = arguments['--beam-size']
     else:
         beam_param = 1
-
-    if arguments['--gpu']:
-        # noinspection PyUnresolvedReferences
-        import _gdynet as dn
-    else:
-        # noinspection PyUnresolvedReferences
-        import _dynet as dn
 
     if arguments['--vocab-size']:
         # noinspection PyUnresolvedReferences
