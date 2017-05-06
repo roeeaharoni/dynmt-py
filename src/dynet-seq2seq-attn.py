@@ -45,7 +45,7 @@ import datetime
 import time
 import os
 import common
-import dynet
+import dynet as dn
 
 from matplotlib import pyplot as plt
 from docopt import docopt
