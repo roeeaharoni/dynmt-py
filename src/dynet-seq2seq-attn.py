@@ -943,7 +943,7 @@ if __name__ == '__main__':
         import _gdynet as dn
     else:
         # noinspection PyUnresolvedReferences
-        import dynet as dn
+        import _dynet as dn
 
     if arguments['--vocab-size']:
         # noinspection PyUnresolvedReferences
