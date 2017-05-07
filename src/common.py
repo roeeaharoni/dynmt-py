@@ -53,8 +53,11 @@ def evaluate_bleu_from_files(gold_outputs_path, output_file_path):
     with codecs.open(bleu_path, encoding='utf8') as f:
         lines  = f.readlines()
 
-    var = re.search(r'BLEU\s+=\s+(.+?),', lines[0])
-    bleu = var.group(1)
+    if len(lines) > 0:
+        var = re.search(r'BLEU\s+=\s+(.+?),', lines[0])
+        bleu = var.group(1)
+    else:
+        bleu = 0
 
     os.remove(bleu_path)
 
