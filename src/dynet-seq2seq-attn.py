@@ -68,6 +68,7 @@ BATCH_SIZE = 1
 MAX_SEQ_LEN = 50
 EVAL_AFTER = 1000
 GRAD_CLIP = 5.0
+EPOCH_EVAL = False
 
 # consts
 UNK = 'UNK'
@@ -395,12 +396,13 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             avg_train_loss = total_loss / float(i * batch_size + e * train_len)
 
             if i % 10 == 0 and i > 0:
-                print 'went through {} train batches out of {} ({} examples out of {})'.format(i, len(train_order),
-                                                                                               i * batch_size,
-                                                                                               train_len)
-
+                print 'went through {} train batches out of {} ({} examples out of {}, {} batches in total)'.format(i, len(train_order),
+                                                                                                i * batch_size,
+                                                                                                train_len,
+                                                                                                total_batches)
+            # checkpoint
             if total_batches % EVAL_AFTER == 0:
-                # create checkpoint
+
                 print 'starting checkpoint evaluation'
                 dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order,
                                                      dev_outputs, int2y, x2int, y2int)
@@ -434,28 +436,36 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                     best_dev_epoch,
                     best_train_epoch)
 
+                if patience == MAX_PATIENCE:
+                    print 'out of patience after {0} checkpoints'.format(str(e))
+                    train_progress_bar.finish()
+                    if plot:
+                        plt.cla()
+                    return model, e
+
         # epoch evaluation
-        print 'starting epoch evaluation'
-        dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs,
-                                             int2y, x2int, y2int)
+        if EPOCH_EVAL:
+            print 'starting epoch evaluation'
+            dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs,
+                                                 int2y, x2int, y2int)
 
-        log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
+            log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
 
-        if dev_bleu >= best_dev_bleu:
-            best_dev_bleu = dev_bleu
-            best_dev_epoch = e
+            if dev_bleu >= best_dev_bleu:
+                best_dev_bleu = dev_bleu
+                best_dev_epoch = e
 
-            # save best model to disk
-            save_best_model(model, results_file_path)
-            print 'saved new best model'
-            patience = 0
-        else:
-            patience += 1
+                # save best model to disk
+                save_best_model(model, results_file_path)
+                print 'saved new best model'
+                patience = 0
+            else:
+                patience += 1
 
-        if dev_loss < best_dev_loss:
-            best_dev_loss = dev_loss
+            if dev_loss < best_dev_loss:
+                best_dev_loss = dev_loss
 
-        print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
+            print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
 best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
             e,
             avg_train_loss,
@@ -468,19 +478,19 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
             best_dev_epoch,
             best_train_epoch)
 
-        if patience == MAX_PATIENCE:
-            print 'out of patience after {0} epochs'.format(str(e))
-            train_progress_bar.finish()
-            if plot:
-                plt.cla()
-            return model, e
+            if patience == MAX_PATIENCE:
+                print 'out of patience after {0} checkpoints'.format(str(e))
+                train_progress_bar.finish()
+                if plot:
+                    plt.cla()
+                return model, e
 
-        # update parameters for plotting before ending epoch loop
-        epochs_x.append(e)
-        train_bleu_y.append(train_bleu)
-        train_loss_y.append(avg_train_loss)
-        dev_loss_y.append(dev_loss)
-        dev_bleu_y.append(dev_bleu)
+            # update parameters for plotting before ending epoch loop
+            epochs_x.append(e)
+            train_bleu_y.append(train_bleu)
+            train_loss_y.append(avg_train_loss)
+            dev_loss_y.append(dev_loss)
+            dev_bleu_y.append(dev_bleu)
 
         # finished epoch
         train_progress_bar.update(e)
