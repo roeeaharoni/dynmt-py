@@ -66,7 +66,7 @@ BEAM_WIDTH = 5
 MAX_VOCAB_SIZE = 30000
 BATCH_SIZE = 1
 MAX_SEQ_LEN = 50
-EVAL_AFTER = 500
+EVAL_AFTER = 1000
 GRAD_CLIP = 5.0
 EPOCH_EVAL = False
 
@@ -86,16 +86,17 @@ END_SEQ = '</s>'
 # divide into batches of batch size - DONE
 # compute loss for batch with attention - DONE
 # debug batching with toy example (chars to letters?) - DONE
+# add multi-checkpoint support + save/evaluate model by checkpoints (every X batches) - DONE
 # TODO: debug batching on GPU - In progress
 
-# TODO: add multi-checkpoint support + save/evaluate model by checkpoints (every X batches)
+
 # evaluate model
 # save model
 # log
 # plot
 # all according to current checkpoint (checkpoint id is total batches)
 
-# TODO: OOP refactoring
+# TODO: OOP refactoring?
 # TODO: debug with non english output (reverse translation from en to heb will work)
 # TODO: do word lookup once in the training stage and not in each epoch
 # TODO: data preproc with better (moses?) scripts
@@ -122,7 +123,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     print 'train input path = {}'.format(str(train_inputs_path))
     print 'train output path = {}'.format(str(train_outputs_path))
     print 'test inputs path = {}'.format(str(test_inputs_path))
-    print 'test inputs path = {}\n'.format(str(test_outputs_path))
+    print 'test output path = {}\n'.format(str(test_outputs_path))
     for param in hyper_params:
         print param + '=' + str(hyper_params[param])
 
@@ -189,8 +190,8 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     if len(predicted_sequences) > 0:
 
         # evaluate the test predictions
-        amount, accuracy = evaluate_model(predicted_sequences, test_outputs, test_inputs, print_results=False)
-        print 'initial eval: {}% accuracy'.format(accuracy)
+        amount, accuracy = evaluate_model(predicted_sequences, test_inputs, test_outputs, print_results=False)
+        print 'test bleu: {}% '.format(accuracy)
 
         final_results = []
         for i in xrange(len(test_outputs)):
@@ -198,12 +199,13 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
             final_output = ' '.join(predicted_sequences[index])
             final_results.append(final_output)
 
-        # evaluate best models
+        # write output files
         predictions_path = common.write_results_files(hyper_params, train_inputs_path, train_outputs_path,
                                                       dev_inputs_path, dev_outputs_path, test_inputs_path,
                                                       test_outputs_path, results_file_path, final_results)
 
-        common.evaluate_bleu(test_outputs_path, predictions_path)
+        # bleu = common.evaluate_bleu_from_files(test_outputs_path, predictions_path)
+
     return
 
 
@@ -687,7 +689,10 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
     f_state = encoder_frnn.initial_state()
     r_state = encoder_rrnn.initial_state()
 
-    max_seq_len = len(input_seq_batch[0])
+    # +2 for begin/end symbols
+    max_seq_len = len(input_seq_batch[0]) + 2
+
+    # iterate in both directions
     for i in xrange(max_seq_len):
         f_state = f_state.add_input(dn.lookup_batch(input_lookup, word_ids[i]))
         f_outputs.append(f_state.output())
@@ -697,7 +702,7 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
 
     # concatenate forward and backward representations for each step
     for i in xrange(max_seq_len):
-        concatenated = dn.concatenate([r_outputs[i], f_outputs[max_seq_len - i - 1]])
+        concatenated = dn.concatenate([f_outputs[i], r_outputs[max_seq_len - i - 1]])
         final_outputs.append(concatenated)
 
     return final_outputs
@@ -705,6 +710,7 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
 
 def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
     dn.renew_cg()
+    alphas_mtx = []
 
     if len(input_seq) == 0:
         return []
@@ -740,6 +746,10 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
         # perform attention step
         attention_output_vector, alphas = attend(blstm_outputs, decoder_rnn_output, w_c, v_a, w_a, u_a)
 
+        if plot_param:
+            val = alphas.vec_value()
+            alphas_mtx.append(val)
+
         # compute output probabilities
         # print 'computing readout layer...'
         h = readout * attention_output_vector + bias
@@ -758,7 +768,7 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
         i += 1
 
     # remove the end seq symbol
-    return predicted_sequence[0:-1]
+    return predicted_sequence[0:-1], alphas_mtx
 
 
 # Luong et. al 2015 attention mechanism:
@@ -785,7 +795,9 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
     predictions = {}
     data_len = len(inputs)
     for i, input_seq in enumerate(inputs):
-        predicted_seq = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
+        if i==0 and plot_param:
+            plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename='/Users/roeeaharoni/git/dynet-seq2seq-attn/data/{}.png'.format(int(time.time())))
+        predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
         if i % 100 == 0 and i > 0:
             print 'predicted {} examples out of {}'.format(i, data_len)
 
@@ -827,6 +839,32 @@ def evaluate_model(predicted_sequences, inputs, outputs, print_results=False):
         print 'finished evaluating model. bleu: {}\n\n'.format(bleu)
 
     return len(predicted_sequences), bleu
+
+
+def plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename=None):
+    # predict
+    output_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
+    fig, ax = plt.subplots()
+
+    image = np.array(alphas_mtx)
+    ax.imshow(image, cmap=plt.cm.Blues, interpolation='nearest')
+
+    # fix x axis ticks density - input len (+2)
+    ax.xaxis.set_ticks(np.arange(0, len(alphas_mtx[0]), 1))
+
+    # fix y axis ticks density - output len (+1)
+    ax.yaxis.set_ticks(np.arange(0, len(alphas_mtx), 1))
+
+    # set tick labels to meaningful symbols
+    ax.set_xticklabels([u'begin'] + list(input_seq) + [u'end'])
+    ax.set_yticklabels(list(output_seq) + [u'end'])
+
+    # set title
+    input_word = u''.join(input_seq)
+    output_word = u''.join(output_seq)
+    ax.set_title(u'attention-based alignment: {} -> {}'.format(input_word, output_word[0:-1]))
+    plt.savefig(filename)
+    plt.close()
 
 
 if __name__ == '__main__':
