@@ -2,8 +2,9 @@ import os
 import codecs
 import re
 
-def write_results_files(hyper_params, train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path,
-                        test_inputs_path, test_outputs_path, output_file_path, final_results, nbest=False):
+
+def write_model_config_file(hyper_params, train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path,
+                        test_inputs_path, test_outputs_path, output_file_path):
 
     # write hyperparams
     with codecs.open(output_file_path + '.modelinfo.txt', 'w', encoding='utf8') as f:
@@ -18,6 +19,8 @@ def write_results_files(hyper_params, train_inputs_path, train_outputs_path, dev
 
         for param in hyper_params:
             f.write(param + ' = ' + str(hyper_params[param]) + '\n')
+
+def write_results_files(output_file_path, final_results):
 
     # write predictions
     predictions_path = output_file_path + '.predictions'

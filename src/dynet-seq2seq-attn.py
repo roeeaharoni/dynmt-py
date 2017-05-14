@@ -6,7 +6,7 @@ Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
   [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION] [--batch-size=BATCH]
   [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
-  [--vocab-size=VOCAB] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH
+  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH
   TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
@@ -35,6 +35,7 @@ Options:
   --batch-size=BATCH            batch size
   --beam-size=BEAM              beam size in beam search
   --vocab-size=VOCAB            vocabulary size
+  --eval-after=EVALAFTER        amount of train batches to wait before evaluation
 """
 
 import numpy as np
@@ -47,6 +48,9 @@ import os
 import common
 import dynet as dn
 
+import matplotlib
+# to run on headless server
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from docopt import docopt
 from collections import defaultdict
@@ -108,7 +112,7 @@ END_SEQ = '</s>'
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
-         override, eval_only, ensemble, batch_size, beam_size, vocab_size):
+         override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after):
     hyper_params = {'INPUT_DIM': input_dim,
                     'HIDDEN_DIM': hidden_dim,
                     'EPOCHS': epochs,
@@ -117,7 +121,12 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
                     'OPTIMIZATION': optimization,
                     'PATIENCE': MAX_PATIENCE,
                     'REGULARIZATION': regularization,
-                    'LEARNING_RATE': learning_rate}
+                    'LEARNING_RATE': learning_rate,
+                    'EVAL_AFTER': eval_after}
+
+    # write model config file (.modelinfo)
+    common.write_model_config_file(hyper_params, train_inputs_path, train_outputs_path, dev_inputs_path,
+                                   dev_outputs_path, test_inputs_path, test_outputs_path, results_file_path)
 
     # debug prints
     print 'train input path = {}'.format(str(train_inputs_path))
@@ -170,7 +179,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     if not eval_only:
         model, params, last_epoch, best_epoch = train_model(model, params, train_inputs, train_outputs, dev_inputs,
                                                             dev_outputs, x2int, y2int, int2y, epochs, optimization,
-                                                            results_file_path, plot, batch_size)
+                                                            results_file_path, plot, batch_size, eval_after)
 
         print 'last epoch is {}'.format(last_epoch)
         print 'best epoch is {}'.format(best_epoch)
@@ -200,9 +209,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
             final_results.append(final_output)
 
         # write output files
-        predictions_path = common.write_results_files(hyper_params, train_inputs_path, train_outputs_path,
-                                                      dev_inputs_path, dev_outputs_path, test_inputs_path,
-                                                      test_outputs_path, results_file_path, final_results)
+        predictions_path = common.write_results_files(results_file_path, final_results)
 
         # bleu = common.evaluate_bleu_from_files(test_outputs_path, predictions_path)
 
@@ -313,7 +320,7 @@ def build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, laye
 
 
 def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outputs, x2int, y2int, int2y, epochs,
-                optimization, results_file_path, plot, batch_size):
+                optimization, results_file_path, plot, batch_size, eval_after):
     print 'training...'
 
     np.random.seed(17)
@@ -403,7 +410,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                                                                                                 train_len,
                                                                                                 total_batches)
             # checkpoint
-            if total_batches % EVAL_AFTER == 0:
+            if total_batches % eval_after == 0:
 
                 print 'starting checkpoint evaluation'
                 dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order,
@@ -796,7 +803,9 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
     data_len = len(inputs)
     for i, input_seq in enumerate(inputs):
         if i==0 and plot_param:
-            plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename='/Users/roeeaharoni/git/dynet-seq2seq-attn/data/{}.png'.format(int(time.time())))
+            plot_attn_weights(params, input_seq, x2int, y2int, int2y,
+                              filename='/Users/roeeaharoni/git/dynet-seq2seq-attn/data/{}_{}.png'.format(
+                                  results_file_path_param.split('/')[-1], int(time.time())))
         predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
         if i % 100 == 0 and i > 0:
             print 'predicted {} examples out of {}'.format(i, data_len)
@@ -980,9 +989,14 @@ if __name__ == '__main__':
         # noinspection PyUnresolvedReferences
         vocab_param = MAX_VOCAB_SIZE
 
+    if arguments['--eval-after']:
+        eval_after_param = int(arguments['--eval-after'])
+    else:
+        eval_after_param = EVAL_AFTER
+
     print arguments
 
     main(train_inputs_path_param, train_outputs_path_param, dev_inputs_path_param, dev_outputs_path_param,
          test_inputs_path_param, test_outputs_path_param, results_file_path_param, input_dim_param, hidden_dim_param,
          epochs_param, layers_param, optimization_param, regularization_param, learning_rate_param, plot_param,
-         override_param, eval_param, ensemble_param, batch_param, beam_param, vocab_param)
+         override_param, eval_param, ensemble_param, batch_param, beam_param, vocab_param, eval_after_param)
