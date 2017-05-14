@@ -6,26 +6,14 @@ base_path=/Users/roeeaharoni
 
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
-python dynet-seq2seq-attn.py --dynet-mem 8000 --input-dim=100 --hidden-dim=100 --epochs=100 --lstm-layers=1 \
+
+python dynet-seq2seq-attn.py --dynet-mem 2000 --input-dim=50 --hidden-dim=100 --epochs=100 --lstm-layers=1 \
 --optimization=ADADELTA --batch-size=1 --beam-size=10 --plot \
-$base_path/git/research/nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.de \
-$base_path/git/research/nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.en \
-$base_path/git/research/nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.de \
-$base_path/git/research/nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.en \
-$base_path/git/research/nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.clean.true.bpe.de \
-$base_path/git/research/nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.clean.true.bpe.en \
-$base_path/git/dynet-seq2seq-attn/results/test4
-
-# train files
-#$base_path/git/research/nmt/data/news-de-en-50/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.de \
-#$base_path/git/research/nmt/data/news-de-en-50/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.en \
-
-# he-en files
-# /Users/roeeaharoni/git/dynet-seq2seq-attn/data/he_en_clean/train.tags.he-en.he.clean \
-#/Users/roeeaharoni/git/dynet-seq2seq-attn/data/he_en_clean/train.tags.he-en.en.clean \
-#/Users/roeeaharoni/git/dynet-seq2seq-attn/data/he_en_clean/IWSLT14.TED.dev2010.he-en.he.xml.clean \
-#/Users/roeeaharoni/git/dynet-seq2seq-attn/data/he_en_clean/IWSLT14.TED.dev2010.he-en.en.xml.clean \
-#/Users/roeeaharoni/git/dynet-seq2seq-attn/data/he_en_clean/IWSLT14.TED.tst2010.he-en.he.xml.clean \
-#/Users/roeeaharoni/git/dynet-seq2seq-attn/data/he_en_clean/IWSLT14.TED.tst2010.he-en.he.xml.clean \
-
+$base_path/git/dynet-seq2seq-attn/data/input.txt \
+$base_path/git/dynet-seq2seq-attn/data/output.txt \
+$base_path/git/dynet-seq2seq-attn/data/input.txt \
+$base_path/git/dynet-seq2seq-attn/data/output.txt \
+$base_path/git/dynet-seq2seq-attn/data/input.txt \
+$base_path/git/dynet-seq2seq-attn/data/output.txt \
+$base_path/git/dynet-seq2seq-attn/results/test_numchar_new
 
