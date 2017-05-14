@@ -804,8 +804,8 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
     for i, input_seq in enumerate(inputs):
         if i==0 and plot_param:
             plot_attn_weights(params, input_seq, x2int, y2int, int2y,
-                              filename='/Users/roeeaharoni/git/dynet-seq2seq-attn/data/{}_{}.png'.format(
-                                  results_file_path_param.split('/')[-1], int(time.time())))
+                              filename='{}_{}.png'.format(
+                                  results_file_path_param, int(time.time())))
         predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
         if i % 100 == 0 and i > 0:
             print 'predicted {} examples out of {}'.format(i, data_len)
