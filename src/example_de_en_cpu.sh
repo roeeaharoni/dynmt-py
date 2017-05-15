@@ -16,4 +16,8 @@ $base_path/git/research/nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.c
 $base_path/git/research/nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.clean.true.bpe.en \
 $base_path/git/dynet-seq2seq-attn/results/test_de_en_cpu
 
+# large train files
+#$base_path/git/research/nmt/data/news-de-en-50/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.de \
+#$base_path/git/research/nmt/data/news-de-en-50/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.en \
+
 
