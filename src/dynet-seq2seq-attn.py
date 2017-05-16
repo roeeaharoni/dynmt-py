@@ -405,10 +405,11 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             avg_train_loss = total_loss / float(i * batch_size + e * train_len)
 
             if i % 10 == 0 and i > 0:
-                print 'went through {} train batches out of {} ({} examples out of {}, {} batches in total)'.format(i, len(train_order),
+                print 'went through {} train batches out of {} ({} examples out of {}, {} batches in total) avg train loss: {}'.format(i, len(train_order),
                                                                                                 i * batch_size,
                                                                                                 train_len,
-                                                                                                total_batches)
+                                                                                                total_batches,
+                                                                                                avg_train_loss)
             # checkpoint
             if total_batches % eval_after == 0:
 
@@ -526,7 +527,7 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
 
 def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs, int2y, x2int, y2int):
 
-    # TODO: could be more efficient - now encoding the dev set twice (for predictions and loss)
+    # TODO: could be more efficient - now "encoding" (lookup) the dev set twice (for predictions and loss)
     print 'predicting on dev...'
     # get dev predictions
     dev_predictions = predict_multiple_sequences(params, x2int, y2int, int2y, dev_inputs)
@@ -785,7 +786,7 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # iterate through input states to compute attention scores
     scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
 
-    # normalize scores using softmax
+    # normalize scores using softmax - TODO: check if correct
     alphas = dn.softmax(dn.concatenate(scores))
 
     # compute context vector with weighted sum for each seq in batch
