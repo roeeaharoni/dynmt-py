@@ -411,14 +411,15 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             if avg_train_loss < best_avg_train_loss and total_batches > 20:
                 best_avg_train_loss = avg_train_loss
                 train_loss_patience = 0
-                print 'improvement'
             else:
-                print 'best_avg_train ' + str(best_avg_train_loss)
-                print 'avg_train ' + str(avg_train_loss)
                 train_loss_patience += 1
                 if train_loss_patience > train_loss_patience_threshold:
                     print 'train loss patience exceeded: {}'.format(train_loss_patience)
                     return model, params, e, best_train_epoch
+
+            print 'best_avg_train ' + str(best_avg_train_loss)
+            print 'avg_train ' + str(avg_train_loss)
+            print 'train loss patiences {}'.format(train_loss_patience)
 
             if i % 10 == 0 and i > 0:
 
