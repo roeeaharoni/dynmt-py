@@ -885,9 +885,9 @@ def plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename=None):
     ax.set_yticklabels(list(output_seq) + [u'end'])
 
     # set title
-    input_word = u''.join(input_seq)
-    output_word = u''.join(output_seq)
-    ax.set_title(u'attention-based alignment: {} -> {}'.format(input_word, output_word[0:-1]))
+    input_word = u' '.join(input_seq)
+    output_word = u' '.join(output_seq)
+    ax.set_title(u'attention-based alignment:\n{}->\n{}'.format(input_word, output_word[0:-1]))
     plt.savefig(filename)
     plt.close()
 
