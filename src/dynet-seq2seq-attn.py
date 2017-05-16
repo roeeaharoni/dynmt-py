@@ -413,9 +413,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             else:
                 train_loss_patience +=1
                 if train_loss_patience > train_loss_patience_threshold:
+                    print 'train loss patience exceeded'
                     return model, params, e, best_train_epoch
-
-
 
             if i % 10 == 0 and i > 0:
                 print 'went through {} train batches out of {} ({} examples out of {}, {} batches in total) avg train loss: {}'.format(i, len(train_order),
@@ -464,6 +463,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                     train_progress_bar.finish()
                     if plot:
                         plt.cla()
+                    print 'checkpoint patience exceeded'
                     return model, params, e, best_train_epoch
 
         # epoch evaluation
@@ -506,6 +506,7 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
                 train_progress_bar.finish()
                 if plot:
                     plt.cla()
+                print 'epoch patience exceeded'
                 return model, params, e, best_train_epoch
 
             # update parameters for plotting before ending epoch loop
