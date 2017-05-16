@@ -372,7 +372,6 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     train_loss_patience_threshold = 1000
     e = 0
     log_path = results_file_path + '_log.txt'
-    # train_sanity_set_size = 100
 
     # progress bar init
     widgets = [progressbar.Bar('>'), ' ', progressbar.ETA()]
@@ -408,7 +407,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             # avg loss per sample
             avg_train_loss = total_loss / float(i * batch_size + e * train_len)
 
-            if avg_train_loss < best_avg_train_loss:
+            # start patience counts only after 20 batches
+            if avg_train_loss < best_avg_train_loss and total_batches > 20:
                 best_avg_train_loss = avg_train_loss
                 train_loss_patience = 0
                 print 'improvement'
