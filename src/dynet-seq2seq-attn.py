@@ -369,7 +369,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     avg_train_loss = -1
     total_batches = 0
     train_loss_patience = 0
-    train_loss_patience_threshold = 100
+    train_loss_patience_threshold = 200
     e = 0
     log_path = results_file_path + '_log.txt'
     # train_sanity_set_size = 100
