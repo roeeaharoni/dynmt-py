@@ -418,10 +418,10 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
             if i % 10 == 0 and i > 0:
 
-                print 'went through {} train batches out of {} (epoch {}: {} examples out of {}) total: {} batches, {} examples. avg train loss: {}'.format(i, len(train_order),
+                print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(i, len(train_order),
+                                                                                                e,
                                                                                                 i * batch_size,
                                                                                                 train_len,
-                                                                                                e,
                                                                                                 total_batches,
                                                                                                 total_batches*batch_size,
                                                                                                 avg_train_loss)
@@ -674,6 +674,7 @@ def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int
 def get_batch_word_ids(batch_seqs, x2int):
     output_word_ids = []
     max_seq_len = 0
+    need_to_mask = False
     for seq in batch_seqs:
         if len(seq) > max_seq_len:
             max_seq_len = len(seq)
@@ -682,13 +683,15 @@ def get_batch_word_ids(batch_seqs, x2int):
         output_word_ids.append([])
         for seq in batch_seqs:
             if i > len(seq) - 1:
+                need_to_mask = True
                 output_word_ids[i].append(x2int[END_SEQ])
             else:
                 if seq[i] in x2int:
                     output_word_ids[i].append(x2int[seq[i]])
                 else:
                     output_word_ids[i].append(x2int[UNK])
-
+    if need_to_mask:
+        print 'need to mask'
     return output_word_ids
 
 
