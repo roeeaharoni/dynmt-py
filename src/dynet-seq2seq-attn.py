@@ -350,8 +350,9 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
         trainer = dn.SimpleSGDTrainer(model)
 
     trainer.set_clip_threshold(GRAD_CLIP)
+    best_avg_train_loss = 99999999
     total_loss = 0
-    best_dev_loss = 999
+    best_dev_loss = 99999999
     best_dev_bleu = -1
     best_train_bleu = -1
     best_dev_epoch = 0
@@ -367,6 +368,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     dev_bleu_y = []
     avg_train_loss = -1
     total_batches = 0
+    train_loss_patience = 0
+    train_loss_patience_threshold = 5
     e = 0
     log_path = results_file_path + '_log.txt'
     # train_sanity_set_size = 100
@@ -403,6 +406,16 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
             # avg loss per sample
             avg_train_loss = total_loss / float(i * batch_size + e * train_len)
+
+            if avg_train_loss < best_avg_train_loss:
+                best_avg_train_loss = avg_train_loss
+                train_loss_patience = 0
+            else:
+                train_loss_patience +=1
+                if train_loss_patience > train_loss_patience_threshold:
+                    return model, params, e, best_train_epoch
+
+
 
             if i % 10 == 0 and i > 0:
                 print 'went through {} train batches out of {} ({} examples out of {}, {} batches in total) avg train loss: {}'.format(i, len(train_order),
@@ -451,7 +464,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                     train_progress_bar.finish()
                     if plot:
                         plt.cla()
-                    return model, e
+                    return model, params, e, best_train_epoch
 
         # epoch evaluation
         if EPOCH_EVAL:
@@ -493,7 +506,7 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
                 train_progress_bar.finish()
                 if plot:
                     plt.cla()
-                return model, e
+                return model, params, e, best_train_epoch
 
             # update parameters for plotting before ending epoch loop
             epochs_x.append(e)
