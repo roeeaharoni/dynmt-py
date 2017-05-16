@@ -807,6 +807,7 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
 
     # iterate through input states to compute attention scores
+    # TODO: mask (zero) scores for inputs that does not exist
     scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
 
     # normalize scores using softmax - TODO: check if correct
