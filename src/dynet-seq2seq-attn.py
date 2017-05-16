@@ -419,7 +419,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
             if i % 10 == 0 and i > 0:
 
-                print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(i, len(train_order),
+                print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(
                                                                                                 e,
                                                                                                 i,
                                                                                                 batches_per_epoch,
