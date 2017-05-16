@@ -382,6 +382,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
         # shuffle the batch start indices in each epoch
         random.shuffle(train_order)
+        batches_per_epoch = len(train_order)
 
         # go through batches
         for i, batch_start_index in enumerate(train_order, start=1):
@@ -420,6 +421,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(i, len(train_order),
                                                                                                 e,
+                                                                                                i,
+                                                                                                batches_per_epoch,
                                                                                                 i * batch_size,
                                                                                                 train_len,
                                                                                                 total_batches,
