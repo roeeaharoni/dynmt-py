@@ -369,7 +369,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     avg_train_loss = -1
     total_batches = 0
     train_loss_patience = 0
-    train_loss_patience_threshold = 5
+    train_loss_patience_threshold = 10
     e = 0
     log_path = results_file_path + '_log.txt'
     # train_sanity_set_size = 100
@@ -417,6 +417,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                     return model, params, e, best_train_epoch
 
             if i % 10 == 0 and i > 0:
+
                 print 'went through {} train batches out of {} ({} examples out of {}, {} batches in total) avg train loss: {}'.format(i, len(train_order),
                                                                                                 i * batch_size,
                                                                                                 train_len,
