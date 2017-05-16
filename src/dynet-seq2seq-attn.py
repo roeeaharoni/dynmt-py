@@ -418,10 +418,12 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
             if i % 10 == 0 and i > 0:
 
-                print 'went through {} train batches out of {} ({} examples out of {}, {} batches in total) avg train loss: {}'.format(i, len(train_order),
+                print 'went through {} train batches out of {} (epoch {}: {} examples out of {}) total: {} batches, {} examples. avg train loss: {}'.format(i, len(train_order),
                                                                                                 i * batch_size,
                                                                                                 train_len,
+                                                                                                e,
                                                                                                 total_batches,
+                                                                                                total_batches*batch_size,
                                                                                                 avg_train_loss)
             # checkpoint
             if total_batches % eval_after == 0:
