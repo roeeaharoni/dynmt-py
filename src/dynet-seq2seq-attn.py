@@ -684,38 +684,36 @@ def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int
 
 # get list of word ids per each timestep in the batch
 def get_batch_word_ids(batch_seqs, x2int):
-    # masking
     tot_chars = 0
     masks = []
+    batch_word_ids = []
 
-    output_word_ids = []
+    # need to maintain longest seq len since output seqs are not sorted by length
     max_seq_len = len(batch_seqs[0])
-    need_to_mask = False
-
-    # TODO: remove this? why first seq len is not enough for max len?
     for seq in batch_seqs:
         if len(seq) > max_seq_len:
-            print 'found longer seq!!!!!!!!!!!!!!!!!!'
             max_seq_len = len(seq)
 
+
     for i in range(max_seq_len):
-        mask = [(1 if len(sent) > i else 0) for sent in batch_seqs]
+        # masking
+        mask = [(1 if len(seq) > i else 0) for seq in batch_seqs]
         masks.append(mask)
         tot_chars += sum(mask)
-        output_word_ids.append([])
+        batch_word_ids.append([])
+
+        # get word ids
         for seq in batch_seqs:
+            # pad short seqs
             if i > len(seq) - 1:
-                need_to_mask = True
-                output_word_ids[i].append(x2int[END_SEQ])
+                batch_word_ids[i].append(x2int[END_SEQ])
             else:
                 if seq[i] in x2int:
-                    output_word_ids[i].append(x2int[seq[i]])
+                    batch_word_ids[i].append(x2int[seq[i]])
                 else:
-                    output_word_ids[i].append(x2int[UNK])
+                    batch_word_ids[i].append(x2int[UNK])
 
-    if need_to_mask:
-        print 'need to mask'
-    return output_word_ids, masks, tot_chars
+    return batch_word_ids, masks, tot_chars
 
 
 # bilstm encode batch, each element in the result is a matrix of 2*h x batch size elements
