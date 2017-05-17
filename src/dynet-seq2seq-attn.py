@@ -626,14 +626,11 @@ def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int
     s_0 = params['decoder_rnn'].initial_state()
     s = s_0
 
+    for seq in output_batch_seqs:
+        seq.append(END_SEQ)
+
     # get output word ids for each step of the decoder
-    output_word_ids = get_batch_word_ids(output_batch_seqs, y2int)
-
-    # end symbol ids
-    end_seq_vec_ids = [y2int[END_SEQ]] * batch_size
-
-    # add end symbol to output seq
-    output_word_ids = output_word_ids + [end_seq_vec_ids]
+    output_word_ids, output_masks, output_tot = get_batch_word_ids(output_batch_seqs, y2int)
 
     # initial "input feeding" vectors to feed decoder - 3*h
     init_input_feeding = dn.lookup_batch(params['init_lookup'], [0] * batch_size)
@@ -663,9 +660,17 @@ def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int
 
         # get batch loss for this timestep
         batch_loss = dn.pickneglogsoftmax_batch(h, step_word_ids)
+
+        # mask the loss if at least one sentence is shorter
+        if output_masks[i][-1] != 1:
+            mask_expr = dn.inputVector(output_masks[i])
+            # TODO: fix?
+            mask_expr = dn.reshape(mask_expr, (1,), batch_size)
+            batch_loss = batch_loss * mask_expr
+
         losses.append(batch_loss)
 
-        # TODO: enable input feeding approach - input h to the decoder
+        # input feeding approach - input h (attention_output_vector) to the decoder
         # prepare for the next iteration - "feedback"
         feedback_embeddings = dn.lookup_batch(params['output_lookup'], step_word_ids)
         decoder_input = dn.concatenate([feedback_embeddings, attention_output_vector])
@@ -679,14 +684,24 @@ def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int
 
 # get list of word ids per each timestep in the batch
 def get_batch_word_ids(batch_seqs, x2int):
+    # masking
+    tot_chars = 0
+    masks = []
+
     output_word_ids = []
-    max_seq_len = 0
+    max_seq_len = len(batch_seqs[0])
     need_to_mask = False
+
+    # TODO: remove this? why first seq len is not enough for max len?
     for seq in batch_seqs:
         if len(seq) > max_seq_len:
+            print 'found longer seq!!!!!!!!!!!!!!!!!!'
             max_seq_len = len(seq)
-    # max_seq_len = len(batch_seqs[0])
+
     for i in range(max_seq_len):
+        mask = [(1 if len(sent) > i else 0) for sent in batch_seqs]
+        masks.append(mask)
+        tot_chars += sum(mask)
         output_word_ids.append([])
         for seq in batch_seqs:
             if i > len(seq) - 1:
@@ -697,9 +712,10 @@ def get_batch_word_ids(batch_seqs, x2int):
                     output_word_ids[i].append(x2int[seq[i]])
                 else:
                     output_word_ids[i].append(x2int[UNK])
+
     if need_to_mask:
         print 'need to mask'
-    return output_word_ids
+    return output_word_ids, masks, tot_chars
 
 
 # bilstm encode batch, each element in the result is a matrix of 2*h x batch size elements
@@ -709,7 +725,7 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
     final_outputs = []
 
     # get the word ids for each step
-    word_ids = get_batch_word_ids(input_seq_batch, x2int)
+    word_ids, masks, tot_chars = get_batch_word_ids(input_seq_batch, x2int)
 
     # initialize with BEGIN_SEQ symbol
     init_ids = [x2int[BEGIN_SEQ]] * len(input_seq_batch)
