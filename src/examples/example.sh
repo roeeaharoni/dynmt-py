@@ -7,7 +7,7 @@ base_path=/Users/roeeaharoni
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 
-python dynet-seq2seq-attn.py --dynet-mem 2000 --input-dim=50 --hidden-dim=100 --epochs=100 --lstm-layers=1 \
+python ../dynet-seq2seq-attn.py --dynet-mem 2000 --input-dim=50 --hidden-dim=100 --epochs=100 --lstm-layers=1 \
 --optimization=ADADELTA --batch-size=1 --beam-size=10 --plot \
 $base_path/git/dynet-seq2seq-attn/data/input.txt \
 $base_path/git/dynet-seq2seq-attn/data/output.txt \
