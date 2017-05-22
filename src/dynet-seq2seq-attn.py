@@ -743,7 +743,7 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
     r_state = encoder_rrnn.initial_state()
 
     # max seq len after padding
-    max_seq_len = len(word_ids[0])
+    max_seq_len = len(input_seq_batch[0]) + 2
 
     # iterate in both directions
     for i in xrange(max_seq_len):
