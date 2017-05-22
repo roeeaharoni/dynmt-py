@@ -626,12 +626,8 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
     s_0 = params['decoder_rnn'].initial_state()
     s = s_0
 
-    # finish with END_SEQ
-    end_symbols = [END_SEQ] * len(batch_output_seqs)
-
-    # TODO: check this is a correct concatenation
     # concatenate the end seq symbols
-    padded_batch_output_seqs = batch_output_seqs + [end_symbols]
+    padded_batch_output_seqs = [seq + [END_SEQ] for seq in batch_output_seqs]
 
     # get output word ids for each step of the decoder
     output_word_ids, output_masks, output_tot = get_batch_word_ids(padded_batch_output_seqs, y2int)
