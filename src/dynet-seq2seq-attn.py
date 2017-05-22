@@ -597,7 +597,7 @@ def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, train_acc
                                                         dev_accuracy))
 
 
-def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int):
+def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int):
     # renew computation graph per batch
     dn.renew_cg()
 
@@ -626,11 +626,15 @@ def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int
     s_0 = params['decoder_rnn'].initial_state()
     s = s_0
 
-    for seq in output_batch_seqs:
-        seq.append(END_SEQ)
+    # finish with END_SEQ
+    end_symbols = [END_SEQ] * len(batch_output_seqs)
+
+    # TODO: check this is a correct concatenation
+    # concatenate the end seq symbols
+    padded_batch_output_seqs = batch_output_seqs + [end_symbols]
 
     # get output word ids for each step of the decoder
-    output_word_ids, output_masks, output_tot = get_batch_word_ids(output_batch_seqs, y2int)
+    output_word_ids, output_masks, output_tot = get_batch_word_ids(padded_batch_output_seqs, y2int)
 
     # initial "input feeding" vectors to feed decoder - 3*h
     init_input_feeding = dn.lookup_batch(params['init_lookup'], [0] * batch_size)
@@ -682,7 +686,7 @@ def compute_batch_loss(params, input_batch_seqs, output_batch_seqs, x2int, y2int
     return total_batch_loss
 
 
-# get list of word ids per each timestep in the batch
+# get list of word ids for each timestep in the batch, do padding and masking
 def get_batch_word_ids(batch_seqs, x2int):
     tot_chars = 0
     masks = []
@@ -722,7 +726,7 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
     r_outputs = []
     final_outputs = []
 
-    # get the word ids for each step
+    # get the word ids for each step, after padding
     word_ids, masks, tot_chars = get_batch_word_ids(input_seq_batch, x2int)
 
     # initialize with BEGIN_SEQ symbol
@@ -731,15 +735,15 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
     # finish with END_SEQ
     end_ids = [x2int[END_SEQ]] * len(input_seq_batch)
 
-    # pad with begin seq / end seq
+    # concatenate the begin seq / end seq symbols
     word_ids = [init_ids] + word_ids + [end_ids]
 
     # init rnns
     f_state = encoder_frnn.initial_state()
     r_state = encoder_rrnn.initial_state()
 
-    # +2 for begin/end symbols
-    max_seq_len = len(input_seq_batch[0]) + 2
+    # max seq len after padding
+    max_seq_len = len(word_ids[0])
 
     # iterate in both directions
     for i in xrange(max_seq_len):
