@@ -43,6 +43,7 @@ def evaluate_bleu(gold, predictions):
         for i, line in enumerate(gold):
             gold_file.write(u'{}\n'.format(line))
 
+    print 'evaluating {} vs. {}'.format(predictions_path, gold_path)
     bleu = evaluate_bleu_from_files(gold_path, predictions_path)
     # os.remove(predictions_path)
     # os.remove(gold_path)
