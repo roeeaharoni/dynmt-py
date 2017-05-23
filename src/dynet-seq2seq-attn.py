@@ -6,8 +6,8 @@ Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
   [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION] [--batch-size=BATCH]
   [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
-  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH
-  TEST_OUTPUTS_PATH RESULTS_PATH...
+  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH
+  DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
   TRAIN_INPUTS_PATH    train inputs path
@@ -36,6 +36,7 @@ Options:
   --beam-size=BEAM              beam size in beam search
   --vocab-size=VOCAB            vocabulary size
   --eval-after=EVALAFTER        amount of train batches to wait before evaluation
+  --max-len=MAXLEN              max train sequence length
 """
 
 import numpy as np
@@ -69,7 +70,7 @@ LEARNING_RATE = 0.0001  # 0.1
 BEAM_WIDTH = 5
 MAX_VOCAB_SIZE = 30000
 BATCH_SIZE = 1
-MAX_SEQ_LEN = 50
+MAX_LEN = 50
 EVAL_AFTER = 1000
 GRAD_CLIP = 5.0
 EPOCH_EVAL = False
@@ -91,28 +92,25 @@ END_SEQ = '</s>'
 # compute loss for batch with attention - DONE
 # debug batching with toy example (chars to letters?) - DONE
 # add multi-checkpoint support + save/evaluate model by checkpoints (every X batches) - DONE
-# TODO: debug batching on GPU - In progress
+# debug batching on GPU - In progress - DONE
+# data preproc with better (moses?) scripts - in string-to-tree project - DONE
+# BPE support - in string-to-tree project - DONE
+# checkpoints - evaluate model, log, plot, according to current checkpoint (checkpoint id is total batches) - DONE
+# find better value for max seq len in the literature - 50 is standard in nmt/80 in moses clean - DONE
 
-
-# evaluate model
-# save model
-# log
-# plot
-# all according to current checkpoint (checkpoint id is total batches)
-
+# TODO: add beamsearch support
+# TODO: measure sentences per second while training/decoding
+# TODO: save model every checkpoint and not only when best model
+# TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring?
 # TODO: debug with non english output (reverse translation from en to heb will work)
-# TODO: do word lookup once in the training stage and not in each epoch
-# TODO: data preproc with better (moses?) scripts
-# TODO: add beamsearch support
-# TODO: BPE support
-# TODO: ensembling support (by interpolating probabilities)
-# TODO: find better value for max seq len in the literature (50 is standard in nmt/80 in moses clean)
+# TODO: efficiency - do word lookup once in the training stage and not in each epoch
+
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
-         override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after):
+         override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after, max_len):
     hyper_params = {'INPUT_DIM': input_dim,
                     'HIDDEN_DIM': hidden_dim,
                     'EPOCHS': epochs,
@@ -138,7 +136,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
 
     # load train, dev and test data
     train_inputs, input_vocabulary, train_outputs, output_vocabulary = \
-        prepare_data.load_parallel_data(train_inputs_path, train_outputs_path, vocab_size, MAX_SEQ_LEN)
+        prepare_data.load_parallel_data(train_inputs_path, train_outputs_path, vocab_size, max_len)
 
     dev_inputs, dev_in_vocab, dev_outputs, dev_out_vocab  = \
         prepare_data.load_parallel_data(dev_inputs_path, dev_outputs_path, vocab_size, 999)
@@ -1037,9 +1035,15 @@ if __name__ == '__main__':
     else:
         eval_after_param = EVAL_AFTER
 
+    if arguments['--max-len']:
+        max_len_param = int(arguments['--max-len'])
+    else:
+        max_len_param = MAX_LEN
+
     print arguments
 
     main(train_inputs_path_param, train_outputs_path_param, dev_inputs_path_param, dev_outputs_path_param,
          test_inputs_path_param, test_outputs_path_param, results_file_path_param, input_dim_param, hidden_dim_param,
          epochs_param, layers_param, optimization_param, regularization_param, learning_rate_param, plot_param,
-         override_param, eval_param, ensemble_param, batch_param, beam_param, vocab_param, eval_after_param)
+         override_param, eval_param, ensemble_param, batch_param, beam_param, vocab_param, eval_after_param,
+         max_len_param)
