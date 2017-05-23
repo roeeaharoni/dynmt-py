@@ -141,10 +141,10 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         prepare_data.load_parallel_data(train_inputs_path, train_outputs_path, vocab_size, MAX_SEQ_LEN)
 
     dev_inputs, dev_in_vocab, dev_outputs, dev_out_vocab  = \
-        prepare_data.load_parallel_data(dev_inputs_path, dev_outputs_path, vocab_size, MAX_SEQ_LEN)
+        prepare_data.load_parallel_data(dev_inputs_path, dev_outputs_path, vocab_size, 999)
 
     test_inputs, test_in_vocab, test_outputs, test_out_vocab = \
-        prepare_data.load_parallel_data(test_inputs_path, test_outputs_path, vocab_size, MAX_SEQ_LEN)
+        prepare_data.load_parallel_data(test_inputs_path, test_outputs_path, vocab_size, 999)
 
     # add unk symbols to vocabularies
     input_vocabulary.append(UNK)
