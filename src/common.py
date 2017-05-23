@@ -44,15 +44,15 @@ def evaluate_bleu(gold, predictions):
             gold_file.write(u'{}\n'.format(line))
 
     bleu = evaluate_bleu_from_files(gold_path, predictions_path)
-    os.remove(predictions_path)
-    os.remove(gold_path)
+    # os.remove(predictions_path)
+    # os.remove(gold_path)
     return bleu
 
 
 def evaluate_bleu_from_files(gold_outputs_path, output_file_path):
     os.chdir(os.path.dirname(__file__))
     bleu_path = output_file_path + '.eval'
-    os.system('perl utils/multi-bleu.perl -lc {} < {} > {}'.format(gold_outputs_path, output_file_path, bleu_path))
+    os.system('perl utils/multi-bleu.perl {} < {} > {}'.format(gold_outputs_path, output_file_path, bleu_path))
     with codecs.open(bleu_path, encoding='utf8') as f:
         lines  = f.readlines()
 
