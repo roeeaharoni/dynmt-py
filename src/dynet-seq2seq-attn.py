@@ -891,16 +891,13 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 
             # TODO: maybe should choose nbest from all expansions and not only from nbest of each hypothesis?
             # find best candidate outputs
-            n_best_indices = common.argmax(probs_val, beam_width)
-            print n_best_indices
+            n_best_indices = common.argmax(probs_val, beam_width).tolist()
             for index in enumerate(n_best_indices):
-                print index
-                print probs_val.dim
                 p = probs_val[index]
                 new_seq = list(prefix_seq).append(int2y[index])
                 new_prob = prefix_prob * p
                 if new_seq[-1] == END_SEQ:
-                    # TODO: add to final states only if fits in k best
+                    # TODO: add to final states only if fits in k best?
                     # if found a complete sequence - add to final states
                     final_states.append((new_seq[0:-1], new_prob))
                 else:
