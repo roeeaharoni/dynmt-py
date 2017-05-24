@@ -894,7 +894,8 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
             n_best_indices = common.argmax(probs_val, beam_width).tolist()
             print n_best_indices
             for index in enumerate(n_best_indices):
-                p = probs_val[index]
+                print index
+                p = probs_val.item(index)
                 new_seq = list(prefix_seq).append(int2y[index])
                 new_prob = prefix_prob * p
                 if new_seq[-1] == END_SEQ:
