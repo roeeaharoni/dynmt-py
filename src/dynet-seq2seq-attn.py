@@ -98,15 +98,13 @@ END_SEQ = '</s>'
 # checkpoints - evaluate model, log, plot, according to current checkpoint (checkpoint id is total batches) - DONE
 # find better value for max seq len in the literature - 50 is standard in nmt/80 in moses clean - DONE
 
-# TODO: add beamsearch support
+# TODO: add beamsearch support - in progress
 # TODO: measure sentences per second while training/decoding
 # TODO: save model every checkpoint and not only when best model
 # TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring?
 # TODO: debug with non english output (reverse translation from en to heb will work)
 # TODO: efficiency - do word lookup once in the training stage and not in each epoch
-
-
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
@@ -798,11 +796,10 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
             alphas_mtx.append(val)
 
         # compute output probabilities
-        # print 'computing readout layer...'
         h = readout * attention_output_vector + bias
-
-        # find best candidate output
         probs = dn.softmax(h)
+
+        # find best candidate output - greedy
         next_element_index = np.argmax(probs.npvalue())
         predicted_sequence.append(int2y[next_element_index])
 
@@ -818,6 +815,108 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
     return predicted_sequence[0:-1], alphas_mtx
 
 
+def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
+    dn.renew_cg()
+
+
+    if len(input_seq) == 0:
+        return []
+
+    # read model parameters
+    readout = dn.parameter(params['readout'])
+    bias = dn.parameter(params['bias'])
+    w_c = dn.parameter(params['w_c'])
+    u_a = dn.parameter(params['u_a'])
+    v_a = dn.parameter(params['v_a'])
+    w_a = dn.parameter(params['w_a'])
+
+    # encode input sequence
+    blstm_outputs = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
+                                        [input_seq])
+
+    alphas_mtx = []
+
+    # complete sequences and their probabilities
+    final_states = []
+
+    # initialize the decoder rnn
+    s_0 = params['decoder_rnn'].initial_state()
+
+    # set prev_output_vec for first lstm step as BEGIN_WORD concatenated with a dedicated learned init vector
+    predicted_sequence = []
+    i = 0
+
+    beam_width = BEAM_WIDTH
+
+    # holds beam step index mapped to sequence, probability, decoder state, attn_vector tuples
+    beam = {-1: [([BEGIN_SEQ], 1.0, s_0, params['init_lookup'][0])]}
+
+    # expand another step if didn't reach max length and there's still beams to expand
+    while i < MAX_PREDICTION_LEN and len(beam[i - 1]) > 0:
+
+        # create all expansions from the previous beam:
+        new_hypos = []
+        for hypothesis in beam[i - 1]:
+            prefix_seq, prefix_prob, prefix_decoder, prefix_attn = hypothesis
+            last_hypo_symbol = prefix_seq[-1]
+
+            # cant expand finished sequences
+            if last_hypo_symbol == END_SEQ:
+                continue
+
+            # expand from the last symbol of the hypothesis
+            try:
+                prev_output_vec = params['output_lookup'][y2int[last_hypo_symbol]]
+            except KeyError:
+                # not a known symbol
+                print 'impossible to expand, key error: ' + str(last_hypo_symbol)
+                continue
+
+            decoder_input = dn.concatenate([prev_output_vec, prefix_attn])
+            s = prefix_decoder.add_input(decoder_input)
+            decoder_rnn_output = s.output()
+
+            # perform attention step
+            attention_output_vector, alphas = attend(blstm_outputs, decoder_rnn_output, w_c, v_a, w_a, u_a)
+
+            # save attention weights for plotting
+            if plot_param:
+                val = alphas.vec_value()
+                alphas_mtx.append(val)
+
+            # compute output probabilities
+            h = readout * attention_output_vector + bias
+            probs = dn.softmax(h)
+            probs_val = probs.npvalue()
+
+            # TODO: maybe should choose nbest from all expansions and not only from nbest of each hypothesis?
+            # find best candidate outputs
+            n_best_indices = common.argmax(probs_val, beam_width)
+            for index in enumerate(n_best_indices):
+                p = probs_val[index]
+                new_seq = list(prefix_seq).append(int2y[index])
+                new_prob = prefix_prob * p
+                if new_seq[-1] == END_SEQ:
+                    # TODO: add to final states only if fits in k best
+                    # if found a complete sequence - add to final states
+                    final_states.append((new_seq[0:-1], new_prob))
+                else:
+                    new_hypos.append((new_seq, new_prob, s, attention_output_vector))
+
+        # add the most probable expansions from all hypotheses to the beam
+        new_probs = [p for (s, p, r, a) in new_hypos]
+        argmax_indices = common.argmax(new_probs, beam_width)
+        beam[i] = [new_hypos[l] for l in argmax_indices]
+        i += 1
+
+    # get nbest results from final states found in search
+    final_probs = [p for (s, p) in final_states]
+    argmax_indices = common.argmax(final_probs, beam_width)
+    nbest_seqs = [final_states[l] for l in argmax_indices]
+
+    return nbest_seqs, alphas_mtx
+
+
 # Luong et. al 2015 attention mechanism:
 def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
@@ -826,7 +925,7 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # TODO: mask (zero) scores for inputs that does not exist
     scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
 
-    # normalize scores using softmax - TODO: check if correct
+    # normalize scores using softmax
     alphas = dn.softmax(dn.concatenate(scores))
 
     # compute context vector with weighted sum for each seq in batch
@@ -847,7 +946,11 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
             plot_attn_weights(params, input_seq, x2int, y2int, int2y,
                               filename='{}_{}.png'.format(
                                   results_file_path_param, int(time.time())))
-        predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
+        if beam_param > 1:
+            # take 1-best result
+            predicted_seq, alphas_mtx = predict_beamsearch(params, input_seq, x2int, y2int, int2y)[0]
+        else:
+            predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
         if i % 100 == 0 and i > 0:
             print 'predicted {} examples out of {}'.format(i, data_len)
 
