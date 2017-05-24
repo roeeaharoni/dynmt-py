@@ -892,6 +892,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
             # TODO: maybe should choose nbest from all expansions and not only from nbest of each hypothesis?
             # find best candidate outputs
             n_best_indices = common.argmax(probs_val, beam_width)
+            print n_best_indices
             for index in enumerate(n_best_indices):
                 print index
                 print probs_val.dim
