@@ -1,7 +1,17 @@
 import os
 import codecs
 import re
+import numpy as np
 
+def argmax(arr, k):
+    # get k best indices
+    indices = np.argpartition(arr, -k)[-k:]
+
+    # sorted
+    indices = indices[np.argsort(arr[indices])]
+
+    # flip so first has largest value
+    return np.flip(indices, 0)
 
 def write_model_config_file(hyper_params, train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path,
                         test_inputs_path, test_outputs_path, output_file_path):
