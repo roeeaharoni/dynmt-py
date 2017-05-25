@@ -912,7 +912,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
         i += 1
 
     # get nbest results from final states found in search
-    final_probs = [p for (s, p) in final_states]
+    final_probs = np.array([p for (s, p) in final_states])
     argmax_indices = common.argmax(final_probs, beam_width)
     nbest_seqs = [final_states[l] for l in argmax_indices]
 
