@@ -906,7 +906,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
                     new_hypos.append((new_seq, new_prob, s, attention_output_vector))
 
         # add the most probable expansions from all hypotheses to the beam
-        new_probs = [p for (s, p, r, a) in new_hypos]
+        new_probs = np.array([p for (s, p, r, a) in new_hypos])
         argmax_indices = common.argmax(new_probs, beam_width)
         beam[i] = [new_hypos[l] for l in argmax_indices]
         i += 1
