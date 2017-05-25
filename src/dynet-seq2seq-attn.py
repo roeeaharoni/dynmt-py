@@ -893,10 +893,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
             n_best_indices = common.argmax(probs_val, beam_width)
             for index in n_best_indices:
                 p = probs_val[index]
-
                 new_seq = prefix_seq + [int2y[index]]
-                print 'prefix_seq: {}'.format(prefix_seq)
-                print 'new_seq: {}'.format(new_seq)
                 new_prob = prefix_prob * p
                 if new_seq[-1] == END_SEQ:
                     # TODO: add to final states only if fits in k best?
