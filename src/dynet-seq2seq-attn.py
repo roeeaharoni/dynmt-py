@@ -842,14 +842,12 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
     # initialize the decoder rnn
     s_0 = params['decoder_rnn'].initial_state()
 
-    # set prev_output_vec for first lstm step as BEGIN_WORD concatenated with a dedicated learned init vector
-    predicted_sequence = []
-    i = 0
 
     beam_width = BEAM_WIDTH
 
-    # holds beam step index mapped to sequence, probability, decoder state, attn_vector tuples
+    # holds beam step index mapped to (sequence, probability, decoder state, attn_vector) tuples
     beam = {-1: [([BEGIN_SEQ], 1.0, s_0, params['init_lookup'][0])]}
+    i = 0
 
     # expand another step if didn't reach max length and there's still beams to expand
     while i < MAX_PREDICTION_LEN and len(beam[i - 1]) > 0:
@@ -880,6 +878,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
             attention_output_vector, alphas = attend(blstm_outputs, decoder_rnn_output, w_c, v_a, w_a, u_a)
 
             # save attention weights for plotting
+            # TODO: add attention weights properly to allow building the attention matrix for the best path
             if plot_param:
                 val = alphas.vec_value()
                 alphas_mtx.append(val)
@@ -894,7 +893,10 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
             n_best_indices = common.argmax(probs_val, beam_width)
             for index in n_best_indices:
                 p = probs_val[index]
+
                 new_seq = list(prefix_seq).append(int2y[index])
+                print 'prefix_seq: {}'.format(prefix_seq)
+                print 'new_seq: {}'.format(new_seq)
                 new_prob = prefix_prob * p
                 if new_seq[-1] == END_SEQ:
                     # TODO: add to final states only if fits in k best?
