@@ -895,7 +895,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
                 p = probs_val[index]
                 new_seq = prefix_seq + [int2y[index]]
                 new_prob = prefix_prob * p
-                if new_seq[-1] == END_SEQ:
+                if new_seq[-1] == END_SEQ or i == MAX_PREDICTION_LEN - 1:
                     # TODO: add to final states only if fits in k best?
                     # if found a complete sequence - add to final states
                     final_states.append((new_seq[0:-1], new_prob))
