@@ -948,6 +948,8 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
         if beam_param > 1:
             # take 1-best result
             nbest, alphas_mtx = predict_beamsearch(params, input_seq, x2int, y2int, int2y)
+            print 'beamsearch done'
+            print nbest
             predicted_seq = nbest[0]
         else:
             predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
