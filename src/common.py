@@ -4,6 +4,9 @@ import re
 import numpy as np
 
 def argmax(arr, k):
+
+    k = min(k, arr.size)
+
     # get k best indices
     indices = np.argpartition(arr, -k)[-k:]
 
