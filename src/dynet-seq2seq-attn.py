@@ -897,8 +897,8 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
                 new_prob = prefix_prob * p
                 if new_seq[-1] == END_SEQ or i == MAX_PREDICTION_LEN - 1:
                     # TODO: add to final states only if fits in k best?
-                    # if found a complete sequence - add to final states
-                    final_states.append((new_seq[0:-1], new_prob))
+                    # if found a complete sequence or max length - add to final states
+                    final_states.append((new_seq[1:-1], new_prob))
                 else:
                     new_hypos.append((new_seq, new_prob, s, attention_output_vector))
 
@@ -950,7 +950,9 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
             nbest, alphas_mtx = predict_beamsearch(params, input_seq, x2int, y2int, int2y)
             print 'beamsearch done'
             print nbest
-            predicted_seq = nbest[0]
+
+            # best hypothesis, sequence without probability
+            predicted_seq = nbest[0][0]
         else:
             predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
         if i % 100 == 0 and i > 0:
