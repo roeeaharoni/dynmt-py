@@ -346,6 +346,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
         trainer = dn.SimpleSGDTrainer(model)
 
     trainer.set_clip_threshold(GRAD_CLIP)
+    elapsed_seconds = 0
+    seen_examples_count = 0
     best_avg_train_loss = 99999999
     total_loss = 0
     best_dev_loss = 99999999
@@ -378,18 +380,20 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
         # shuffle the batch start indices in each epoch
         random.shuffle(train_order)
         batches_per_epoch = len(train_order)
+        start = time.time()
 
         # go through batches
         for i, batch_start_index in enumerate(train_order, start=1):
-
             total_batches += 1
 
             # get batch examples
             batch_inputs = [x[0] for x in train_data[batch_start_index:batch_start_index + batch_size]]
             batch_outputs = [x[1] for x in train_data[batch_start_index:batch_start_index + batch_size]]
 
-            # skip empty batch
-            if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
+            actual_batch_size = len(batch_inputs)
+
+            # skip empty batches
+            if actual_batch_size == 0 or len(batch_inputs[0]) == 0:
                 continue
 
             # compute batch loss
@@ -399,6 +403,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             total_loss += loss.scalar_value()
             loss.backward()
             trainer.update()
+
+            seen_examples_count += actual_batch_size
 
             # avg loss per sample
             avg_train_loss = total_loss / float(i * batch_size + e * train_len)
@@ -418,7 +424,6 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             print 'train loss patiences {}'.format(train_loss_patience)
 
             if i % 10 == 0 and i > 0:
-
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(
                                                                                                 e,
                                                                                                 i,
@@ -428,6 +433,13 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                                                                                                 total_batches,
                                                                                                 total_batches*batch_size,
                                                                                                 avg_train_loss)
+            # print sentences per second
+            end = time.time()
+            elapsed_seconds = end - start
+            print '{} sentences per second'.format(seen_examples_count / elapsed_seconds)
+            seen_examples_count = 0
+            start = time.time()
+
             # checkpoint
             if total_batches % eval_after == 0:
 
