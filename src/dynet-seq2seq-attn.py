@@ -419,9 +419,9 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                     print 'train loss patience exceeded: {}'.format(train_loss_patience)
                     return model, params, e, best_train_epoch
 
-            print 'best_avg_train ' + str(best_avg_train_loss)
-            print 'avg_train ' + str(avg_train_loss)
-            print 'train loss patiences {}'.format(train_loss_patience)
+            # print 'best_avg_train ' + str(best_avg_train_loss)
+            # print 'avg_train ' + str(avg_train_loss)
+            # print 'train loss patiences {}'.format(train_loss_patience)
 
             if i % 10 == 0 and i > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(
