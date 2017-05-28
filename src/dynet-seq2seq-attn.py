@@ -433,12 +433,12 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                                                                                                 total_batches,
                                                                                                 total_batches*batch_size,
                                                                                                 avg_train_loss)
-            # print sentences per second
-            end = time.time()
-            elapsed_seconds = end - start
-            print '{} sentences per second'.format(seen_examples_count / elapsed_seconds)
-            seen_examples_count = 0
-            start = time.time()
+                # print sentences per second
+                end = time.time()
+                elapsed_seconds = end - start
+                print '{} sentences per second'.format(seen_examples_count / elapsed_seconds)
+                seen_examples_count = 0
+                start = time.time()
 
             # checkpoint
             if total_batches % eval_after == 0:
