@@ -389,7 +389,6 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             # get batch examples
             batch_inputs = [x[0] for x in train_data[batch_start_index:batch_start_index + batch_size]]
             batch_outputs = [x[1] for x in train_data[batch_start_index:batch_start_index + batch_size]]
-
             actual_batch_size = len(batch_inputs)
 
             # skip empty batches
@@ -423,7 +422,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             # print 'avg_train ' + str(avg_train_loss)
             # print 'train loss patiences {}'.format(train_loss_patience)
 
-            if i % 100 == 0 and i > 0:
+            if i % 1000 == 0 and i > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(
                                                                                                 e,
                                                                                                 i,
