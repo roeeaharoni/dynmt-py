@@ -422,7 +422,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             # print 'avg_train ' + str(avg_train_loss)
             # print 'train loss patiences {}'.format(train_loss_patience)
 
-            if i % 1000 == 0 and i > 0:
+            if i % 500 == 0 and i > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(
                                                                                                 e,
                                                                                                 i,
@@ -827,11 +827,12 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
 
 
 def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
-    dn.renew_cg()
-
-
     if len(input_seq) == 0:
         return []
+
+    dn.renew_cg()
+    beam_width = BEAM_WIDTH
+    alphas_mtx = []
 
     # read model parameters
     readout = dn.parameter(params['readout'])
@@ -845,16 +846,11 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
     blstm_outputs = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
                                         [input_seq])
 
-    alphas_mtx = []
-
     # complete sequences and their probabilities
     final_states = []
 
     # initialize the decoder rnn
     s_0 = params['decoder_rnn'].initial_state()
-
-
-    beam_width = BEAM_WIDTH
 
     # holds beam step index mapped to (sequence, probability, decoder state, attn_vector) tuples
     beam = {-1: [([BEGIN_SEQ], 1.0, s_0, params['init_lookup'][0])]}
@@ -959,8 +955,6 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
         if beam_param > 1:
             # take 1-best result
             nbest, alphas_mtx = predict_beamsearch(params, input_seq, x2int, y2int, int2y)
-            print 'beamsearch done'
-            print nbest
 
             # best hypothesis, sequence without probability
             predicted_seq = nbest[0][0]
