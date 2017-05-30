@@ -81,32 +81,12 @@ UNK = 'UNK'
 BEGIN_SEQ = '<s>'
 END_SEQ = '</s>'
 
-
-# finish data preproc - DONE
-# add support for large vocab/UNKs (limit vocab size) - DONE
-# debug on cpu - DONE
-# moses BLEU evaluation - DONE
-# debug on gpu - DONE
-# minibatch support - DONE
-# sort inputs by length - DONE
-# divide into batches of batch size - DONE
-# compute loss for batch with attention - DONE
-# debug batching with toy example (chars to letters?) - DONE
-# add multi-checkpoint support + save/evaluate model by checkpoints (every X batches) - DONE
-# debug batching on GPU - In progress - DONE
-# data preproc with better (moses?) scripts - in string-to-tree project - DONE
-# BPE support - in string-to-tree project - DONE
-# checkpoints - evaluate model, log, plot, according to current checkpoint (checkpoint id is total batches) - DONE
-# find better value for max seq len in the literature - 50 is standard in nmt/80 in moses clean - DONE
-
-# TODO: add beamsearch support - in progress
-# TODO: measure sentences per second while training/decoding
+# TODO: add masking for the input (zero attention weights)
+# TODO: measure sentences per second while decoding
 # TODO: save model every checkpoint and not only when best model
 # TODO: add ensembling support by interpolating probabilities
-# TODO: OOP refactoring?
-# TODO: debug with non english output (reverse translation from en to heb will work)
-# TODO: efficiency - do word lookup once in the training stage and not in each epoch
-
+# TODO: OOP refactoring
+# TODO: debug with non english output (i.e. reverse translation from en to he)
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
          override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after, max_len):
