@@ -3,9 +3,9 @@
 Sequence to sequence learning with an attention mechanism implemented using dynet's python bindings.
 
 Usage:
-  dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--dynet-autobatch AUTO] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
-  [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION] [--batch-size=BATCH]
-  [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
+  dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--dynet-autobatch AUTO] [--input-dim=INPUT]
+  [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
+  [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH
   DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
@@ -49,13 +49,13 @@ import time
 import os
 import common
 import dynet as dn
-
 import matplotlib
-# to run on headless server
-matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from docopt import docopt
 from collections import defaultdict
+
+# to run on headless server
+matplotlib.use('Agg')
 
 # default values
 INPUT_DIM = 300
@@ -87,6 +87,8 @@ END_SEQ = '</s>'
 # TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring
 # TODO: debug with non english output (i.e. reverse translation from en to he)
+
+
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
          override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after, max_len):
@@ -99,7 +101,8 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
                     'PATIENCE': MAX_PATIENCE,
                     'REGULARIZATION': regularization,
                     'LEARNING_RATE': learning_rate,
-                    'EVAL_AFTER': eval_after}
+                    'EVAL_AFTER': eval_after,
+                    'BEAM_SIZE': beam_size}
 
     # write model config file (.modelinfo)
     common.write_model_config_file(hyper_params, train_inputs_path, train_outputs_path, dev_inputs_path,
@@ -117,7 +120,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     train_inputs, input_vocabulary, train_outputs, output_vocabulary = \
         prepare_data.load_parallel_data(train_inputs_path, train_outputs_path, vocab_size, max_len)
 
-    dev_inputs, dev_in_vocab, dev_outputs, dev_out_vocab  = \
+    dev_inputs, dev_in_vocab, dev_outputs, dev_out_vocab = \
         prepare_data.load_parallel_data(dev_inputs_path, dev_outputs_path, vocab_size, 999)
 
     test_inputs, test_in_vocab, test_outputs, test_out_vocab = \
@@ -157,7 +160,6 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         model, params, last_epoch, best_epoch = train_model(model, params, train_inputs, train_outputs, dev_inputs,
                                                             dev_outputs, x2int, y2int, int2y, epochs, optimization,
                                                             results_file_path, plot, batch_size, eval_after)
-
         print 'last epoch is {}'.format(last_epoch)
         print 'best epoch is {}'.format(best_epoch)
         print 'finished training'
@@ -186,7 +188,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
             final_results.append(final_output)
 
         # write output files
-        predictions_path = common.write_results_files(results_file_path, final_results)
+        common.write_results_files(results_file_path, final_results)
 
         # bleu = common.evaluate_bleu_from_files(test_outputs_path, predictions_path)
 
@@ -327,7 +329,6 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
         trainer = dn.SimpleSGDTrainer(model)
 
     trainer.set_clip_threshold(GRAD_CLIP)
-    elapsed_seconds = 0
     seen_examples_count = 0
     best_avg_train_loss = 99999999
     total_loss = 0
@@ -401,18 +402,18 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
             # print 'best_avg_train ' + str(best_avg_train_loss)
             # print 'avg_train ' + str(avg_train_loss)
-            # print 'train loss patiences {}'.format(train_loss_patience)
+            # print 'train loss patience {}'.format(train_loss_patience)
 
             if i % 500 == 0 and i > 0:
-                print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg loss per example: {}'.format(
-                                                                                                e,
-                                                                                                i,
-                                                                                                batches_per_epoch,
-                                                                                                i * batch_size,
-                                                                                                train_len,
-                                                                                                total_batches,
-                                                                                                total_batches*batch_size,
-                                                                                                avg_train_loss)
+                print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg \
+                loss per example: {}'.format(e,
+                                             i,
+                                             batches_per_epoch,
+                                             i * batch_size,
+                                             train_len,
+                                             total_batches,
+                                             total_batches*batch_size,
+                                             avg_train_loss)
                 # print sentences per second
                 end = time.time()
                 elapsed_seconds = end - start
@@ -467,8 +468,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
         # epoch evaluation
         if EPOCH_EVAL:
             print 'starting epoch evaluation'
-            dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs,
-                                                 int2y, x2int, y2int)
+            dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order,
+                                                 dev_outputs, int2y, x2int, y2int)
 
             log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
 
@@ -487,17 +488,16 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                 best_dev_loss = dev_loss
 
             print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
-best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
-            e,
-            avg_train_loss,
-            dev_loss,
-            dev_bleu,
-            train_bleu,
-            best_dev_bleu,
-            best_train_bleu,
-            patience,
-            best_dev_epoch,
-            best_train_epoch)
+best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(e,
+                                                                                              avg_train_loss,
+                                                                                              dev_loss,
+                                                                                              dev_bleu,
+                                                                                              train_bleu,
+                                                                                              best_dev_bleu,
+                                                                                              best_train_bleu,
+                                                                                              patience,
+                                                                                              best_dev_epoch,
+                                                                                              best_train_epoch)
 
             if patience == MAX_PATIENCE:
                 print 'out of patience after {0} checkpoints'.format(str(e))
@@ -674,7 +674,6 @@ def get_batch_word_ids(batch_seqs, x2int):
     for seq in batch_seqs:
         if len(seq) > max_seq_len:
             max_seq_len = len(seq)
-
 
     for i in range(max_seq_len):
         # masking
@@ -922,7 +921,7 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
     predictions = {}
     data_len = len(inputs)
     for i, input_seq in enumerate(inputs):
-        if i==0 and plot_param:
+        if i == 0 and plot_param:
             plot_attn_weights(params, input_seq, x2int, y2int, int2y,
                               filename='{}_{}.png'.format(
                                   results_file_path_param, int(time.time())))
