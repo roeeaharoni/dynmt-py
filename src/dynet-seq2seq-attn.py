@@ -3,7 +3,7 @@
 Sequence to sequence learning with an attention mechanism implemented using dynet's python bindings.
 
 Usage:
-  dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
+  dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--dynet-autobatch AUTO] [--input-dim=INPUT] [--hidden-dim=HIDDEN]
   [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION] [--batch-size=BATCH]
   [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH
@@ -22,6 +22,7 @@ Options:
   -h --help                     show this help message and exit
   --dynet-mem MEM               allocates MEM bytes for dynet
   --dynet-gpu-ids IDS           GPU ids to use
+  --dynet-autobatch AUTO        switch auto-batching on
   --input-dim=INPUT             input embeddings dimension
   --hidden-dim=HIDDEN           LSTM hidden layer dimension
   --epochs=EPOCHS               amount of training epochs
