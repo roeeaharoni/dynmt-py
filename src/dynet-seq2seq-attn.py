@@ -619,12 +619,6 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
 
     batch_size = len(input_batch_seqs)
 
-    # print 'INPUTS:'
-    # for c, inputz in enumerate(input_batch_seqs):
-    #     print u' '.join(inputz)
-    #     print u' '.join(output_batch_seqs[c])
-    #     print '\n'
-
     # encode batch with bilstm encoder: each element represents one step in time, and is a matrix of 2*h x batch size
     # for example, for sentence length of 12, blstm_outputs wil be: 12 x 2 x 100 x 16
     blstm_outputs = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
@@ -672,7 +666,6 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
         # mask the loss if at least one sentence is shorter
         if output_masks[i][-1] != 1:
             mask_expr = dn.inputVector(output_masks[i])
-            # TODO: fix?
             mask_expr = dn.reshape(mask_expr, (1,), batch_size)
             batch_loss = batch_loss * mask_expr
 
