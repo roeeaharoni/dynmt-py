@@ -49,13 +49,16 @@ import time
 import os
 import common
 import dynet as dn
-import matplotlib
-from matplotlib import pyplot as plt
 from docopt import docopt
 from collections import defaultdict
+import matplotlib
 
 # to run on headless server
 matplotlib.use('Agg')
+
+from matplotlib import pyplot as plt
+
+
 
 # default values
 INPUT_DIM = 300
