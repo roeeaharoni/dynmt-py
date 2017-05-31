@@ -623,9 +623,8 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
     # initial feedback embeddings for the decoder, use begin seq symbol embedding
     init_feedback = dn.lookup_batch(params['output_lookup'], [y2int[BEGIN_SEQ]] * batch_size)
 
-    decoder_init = dn.concatenate([init_feedback, init_input_feeding])
-
     # init decoder
+    decoder_init = dn.concatenate([init_feedback, init_input_feeding])
     s = s.add_input(decoder_init)
 
     # loss per timestep
@@ -641,7 +640,8 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
         attention_output_vector, alphas = attend(blstm_outputs, decoder_rnn_output, w_c, v_a, w_a, u_a)
 
         # compute output scores (returns vocab_size x batch size matrix)
-        h = readout * attention_output_vector + bias
+        # h = readout * attention_output_vector + bias
+        h = dn.affine_transform([bias, readout, attention_output_vector])
 
         # get batch loss for this timestep
         batch_loss = dn.pickneglogsoftmax_batch(h, step_word_ids)
@@ -783,7 +783,8 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
             alphas_mtx.append(val)
 
         # compute output probabilities
-        h = readout * attention_output_vector + bias
+        # h = readout * attention_output_vector + bias
+        h = dn.affine_transform([bias, readout, attention_output_vector])
         probs = dn.softmax(h)
 
         # find best candidate output - greedy
@@ -867,7 +868,8 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
                 alphas_mtx.append(val)
 
             # compute output probabilities
-            h = readout * attention_output_vector + bias
+            # h = readout * attention_output_vector + bias
+            h = dn.affine_transform([bias, readout, attention_output_vector])
             probs = dn.softmax(h)
             probs_val = probs.npvalue()
 
@@ -905,7 +907,9 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
 
     # iterate through input states to compute attention scores
     # TODO: mask (zero) scores for inputs that does not exist
-    scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
+    # scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
+    w_a_h_t = w_a * h_t
+    scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
 
     # normalize scores using softmax
     alphas = dn.softmax(dn.concatenate(scores))
