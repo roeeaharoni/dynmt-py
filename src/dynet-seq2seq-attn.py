@@ -908,7 +908,9 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     alphas = dn.softmax(dn.concatenate(scores))
 
     # compute context vector with weighted sum for each seq in batch
-    c = dn.esum([h_input * dn.pick(alphas, j) for j, h_input in enumerate(blstm_outputs)])
+    bo = dn.concatenate_cols(blstm_outputs)
+    c = bo * alphas
+    # c = dn.esum([h_input * dn.pick(alphas, j) for j, h_input in enumerate(blstm_outputs)])
 
     # compute output vector using current decoder state and context vector
     h_output = dn.tanh(w_c * dn.concatenate([h_t, c]))
