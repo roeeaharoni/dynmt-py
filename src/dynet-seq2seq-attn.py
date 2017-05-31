@@ -565,7 +565,7 @@ def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order
 
         loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
 
-        total_dev_loss += loss.scalar_value()
+        total_dev_loss += loss.value()
 
         if i % 10 == 0 and i > 0:
             print 'went through {} dev batches out of {} ({} examples out of {})'.format(i, len(dev_order),
