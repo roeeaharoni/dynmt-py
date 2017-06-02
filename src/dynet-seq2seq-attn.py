@@ -409,7 +409,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
 
             if i % 500 == 0 and i > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg \
-                loss per example: {}'.format(e,
+loss per example: {}'.format(e,
                                              i,
                                              batches_per_epoch,
                                              i * batch_size,
@@ -448,7 +448,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                     best_dev_loss = dev_loss
 
                 print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
-            best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
+best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
                     e,
                     avg_train_loss,
                     dev_loss,
@@ -554,6 +554,8 @@ def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order
     print 'computing dev loss...'
     total_dev_loss = 0
     for i, batch_start_index in enumerate(dev_order, start=1):
+
+        print 'dev batch {}'.format(i)
 
         # get dev batches
         batch_inputs = [x[0] for x in dev_data[batch_start_index:batch_start_index + batch_size]]
