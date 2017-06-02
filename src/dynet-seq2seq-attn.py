@@ -1008,7 +1008,7 @@ def plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename=None):
     # set title
     input_word = u' '.join(input_seq)
     output_word = u' '.join(output_seq)
-    ax.set_title(u'attention-based alignment:\n{}->\n{}'.format(input_word, output_word[0:-1]))
+    ax.set_title(u'attention-based alignment:\n{}->\n{}'.format(input_word, output_word))
     plt.savefig(filename)
     plt.close()
 
