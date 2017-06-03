@@ -6,8 +6,8 @@ Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--dynet-autobatch AUTO] [--input-dim=INPUT]
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
-  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH
-  DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
+  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH
+  DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
   TRAIN_INPUTS_PATH    train inputs path
@@ -38,6 +38,7 @@ Options:
   --vocab-size=VOCAB            vocabulary size
   --eval-after=EVALAFTER        amount of train batches to wait before evaluation
   --max-len=MAXLEN              max train sequence length
+  --last-state                  only use last encoder state
 """
 
 import numpy as np
@@ -94,7 +95,7 @@ END_SEQ = '</s>'
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
          results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
-         override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after, max_len):
+         override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after, max_len, last_state):
     hyper_params = {'INPUT_DIM': input_dim,
                     'HIDDEN_DIM': hidden_dim,
                     'EPOCHS': epochs,
@@ -907,6 +908,8 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 # Luong et. al 2015 attention mechanism:
 def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
+    if last_state_param:
+        blstm_outputs = blstm_outputs[-1]
 
     # iterate through input states to compute attention scores
     # TODO: mask (zero) scores for inputs that does not exist
@@ -1143,10 +1146,15 @@ if __name__ == '__main__':
     else:
         max_len_param = MAX_LEN
 
+    if arguments['--last-state']:
+        last_state_param = True
+    else:
+        last_state_param = False
+
     print arguments
 
     main(train_inputs_path_param, train_outputs_path_param, dev_inputs_path_param, dev_outputs_path_param,
          test_inputs_path_param, test_outputs_path_param, results_file_path_param, input_dim_param, hidden_dim_param,
          epochs_param, layers_param, optimization_param, regularization_param, learning_rate_param, plot_param,
          override_param, eval_param, ensemble_param, batch_param, beam_param, vocab_param, eval_after_param,
-         max_len_param)
+         max_len_param, last_state_param)
