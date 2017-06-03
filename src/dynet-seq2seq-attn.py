@@ -909,7 +909,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
     if last_state_param:
-        blstm_outputs = blstm_outputs[-1]
+        blstm_outputs = [blstm_outputs[-1]]
 
     # iterate through input states to compute attention scores
     # TODO: mask (zero) scores for inputs that does not exist
