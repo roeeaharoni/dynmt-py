@@ -555,8 +555,6 @@ def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order
     total_dev_loss = 0
     for i, batch_start_index in enumerate(dev_order, start=1):
 
-        print 'dev batch {}'.format(i)
-
         # get dev batches
         batch_inputs = [x[0] for x in dev_data[batch_start_index:batch_start_index + batch_size]]
         batch_outputs = [x[1] for x in dev_data[batch_start_index:batch_start_index + batch_size]]
@@ -565,8 +563,10 @@ def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order
         if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
             continue
 
-        loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
+        print 'dev batch {}'.format(i)
+        print 'batch sent len {}'.format(len(batch_inputs[0]))
 
+        loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
         total_dev_loss += loss.value()
 
         if i % 10 == 0 and i > 0:
