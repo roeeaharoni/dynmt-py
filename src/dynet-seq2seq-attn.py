@@ -948,7 +948,7 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
             # TODO: remove
             print u'input: {}\n'.format(u' '.join(input_seq).encode('utf8'))
             for k, seq in enumerate(nbest):
-                print u'{}-best: {}'.format(k, u' '.join(seq[0].encode('utf8')) + u'\n')
+                print u'{}-best: {}'.format(k, u' '.join(seq[0]).encode('utf8') + u'\n')
         else:
             predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
         if i % 100 == 0 and i > 0:
