@@ -91,6 +91,7 @@ END_SEQ = '</s>'
 # TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring
 # TODO: debug with non english output (i.e. reverse translation from en to he)
+# TODO: print n-best lists to file
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
@@ -315,9 +316,10 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     train_order = [x * batch_size for x in range(len(train_data) / batch_size + 1)]
 
     # sort dev sentences by length in descending order
+    dev_batch_size = 1
     dev_data = zip(dev_inputs, dev_outputs)
     dev_data.sort(key=lambda t: - len(t[0]))
-    dev_order = [x * batch_size for x in range(len(dev_data) / batch_size + 1)]
+    dev_order = [x * dev_batch_size for x in range(len(dev_data) / dev_batch_size + 1)]
 
     if optimization == 'ADAM':
         trainer = dn.AdamTrainer(model)  # lam=REGULARIZATION, alpha=LEARNING_RATE, beta_1=0.9, beta_2=0.999, eps=1e-8)
@@ -429,7 +431,7 @@ loss per example: {}'.format(e,
             if total_batches % eval_after == 0:
 
                 print 'starting checkpoint evaluation'
-                dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order,
+                dev_bleu, dev_loss = checkpoint_eval(params, dev_batch_size, dev_data, dev_inputs, dev_len, dev_order,
                                                      dev_outputs, int2y, x2int, y2int)
 
                 log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
@@ -472,7 +474,7 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
         # epoch evaluation
         if EPOCH_EVAL:
             print 'starting epoch evaluation'
-            dev_bleu, dev_loss = checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order,
+            dev_bleu, dev_loss = checkpoint_eval(params, dev_batch_size, dev_data, dev_inputs, dev_len, dev_order,
                                                  dev_outputs, int2y, x2int, y2int)
 
             log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
