@@ -6,7 +6,7 @@ Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--dynet-autobatch AUTO] [--input-dim=INPUT]
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
-  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred] TRAIN_INPUTS_PATH
+  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED] TRAIN_INPUTS_PATH
   TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
