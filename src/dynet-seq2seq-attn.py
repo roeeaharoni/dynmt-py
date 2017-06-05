@@ -23,21 +23,24 @@ Options:
   --dynet-mem MEM               allocates MEM bytes for dynet
   --dynet-gpu-ids IDS           GPU ids to use
   --dynet-autobatch AUTO        switch auto-batching on
-  --input-dim=INPUT             input embeddings dimension
-  --hidden-dim=HIDDEN           LSTM hidden layer dimension
-  --epochs=EPOCHS               amount of training epochs
-  --layers=LAYERS               amount of layers in LSTM
-  --optimization=OPTIMIZATION   chosen optimization method (ADAM/SGD/ADAGRAD/MOMENTUM/ADADELTA)
-  --reg=REGULARIZATION          regularization parameter for optimization
-  --learning=LEARNING           learning rate parameter for optimization
+  --input-dim=INPUT             input embeddings dimension [default: 300]
+  --hidden-dim=HIDDEN           LSTM hidden layer dimension [default: 100]
+  --epochs=EPOCHS               amount of training epochs [default: 1]
+  --layers=LAYERS               amount of layers in LSTM [default: 1]
+  --optimization=OPTIMIZATION   chosen optimization method (ADAM/SGD/ADAGRAD/MOMENTUM/ADADELTA) [default: ADADELTA]
+  --reg=REGULARIZATION          regularization parameter for optimization [default: 0]
+  --learning=LEARNING           learning rate parameter for optimization [default: 0.0001]
+  --batch-size=BATCH            batch size [default: 1]
+  --beam-size=BEAM              beam size in beam search [default: 5]
+  --vocab-size=VOCAB            max vocabulary size [default: 99999]
+  --eval-after=EVALAFTER        amount of train batches to wait before evaluation [default: 1000]
+  --max-len=MAXLEN              max train sequence length [default: 50]
+  --max-pred=MAXPRED            max predicted sequence length [default: 50]
+  --grad-clip=GRADCLIP          gradient clipping threshold [default: 5.0]
+  --max-patience=MAXPATIENCE    amount of checkpoints without improvement on dev before early stopping [default: 100]
   --plot                        plot a learning curve while training each model
   --override                    override existing model with the same name, if exists
   --ensemble=ENSEMBLE           ensemble model paths separated by a comma
-  --batch-size=BATCH            batch size
-  --beam-size=BEAM              beam size in beam search
-  --vocab-size=VOCAB            vocabulary size
-  --eval-after=EVALAFTER        amount of train batches to wait before evaluation
-  --max-len=MAXLEN              max train sequence length
   --last-state                  only use last encoder state
 """
 
@@ -45,7 +48,6 @@ import numpy as np
 import random
 import prepare_data
 import progressbar
-import datetime
 import time
 import os
 import common
@@ -56,29 +58,8 @@ import matplotlib
 
 # to run on headless server
 matplotlib.use('Agg')
-
+# noinspection PyPep8
 from matplotlib import pyplot as plt
-
-
-
-# default values
-INPUT_DIM = 300
-HIDDEN_DIM = 100
-EPOCHS = 1
-LAYERS = 2
-MAX_PREDICTION_LEN = 50
-OPTIMIZATION = 'ADADELTA'
-EARLY_STOPPING = True
-MAX_PATIENCE = 100
-REGULARIZATION = 0.0
-LEARNING_RATE = 0.0001  # 0.1
-BEAM_WIDTH = 5
-MAX_VOCAB_SIZE = 30000
-BATCH_SIZE = 1
-MAX_LEN = 50
-EVAL_AFTER = 1000
-GRAD_CLIP = 5.0
-EPOCH_EVAL = False
 
 # consts
 UNK = 'UNK'
@@ -95,31 +76,16 @@ END_SEQ = '</s>'
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
-         results_file_path, input_dim, hidden_dim, epochs, layers, optimization, regularization, learning_rate, plot,
-         override, eval_only, ensemble, batch_size, beam_size, vocab_size, eval_after, max_len, last_state):
-    hyper_params = {'INPUT_DIM': input_dim,
-                    'HIDDEN_DIM': hidden_dim,
-                    'EPOCHS': epochs,
-                    'LAYERS': layers,
-                    'MAX_PREDICTION_LEN': MAX_PREDICTION_LEN,
-                    'OPTIMIZATION': optimization,
-                    'PATIENCE': MAX_PATIENCE,
-                    'REGULARIZATION': regularization,
-                    'LEARNING_RATE': learning_rate,
-                    'EVAL_AFTER': eval_after,
-                    'BEAM_SIZE': beam_size}
+         results_file_path, input_dim, hidden_dim, epochs, layers, optimization, plot,
+         override, eval_only, ensemble, batch_size, vocab_size, eval_after, max_len):
 
     # write model config file (.modelinfo)
-    common.write_model_config_file(hyper_params, train_inputs_path, train_outputs_path, dev_inputs_path,
+    common.write_model_config_file(arguments, train_inputs_path, train_outputs_path, dev_inputs_path,
                                    dev_outputs_path, test_inputs_path, test_outputs_path, results_file_path)
 
-    # debug prints
-    print 'train input path = {}'.format(str(train_inputs_path))
-    print 'train output path = {}'.format(str(train_outputs_path))
-    print 'test inputs path = {}'.format(str(test_inputs_path))
-    print 'test output path = {}\n'.format(str(test_outputs_path))
-    for param in hyper_params:
-        print param + '=' + str(hyper_params[param])
+    # print arguments for current run
+    for param in arguments:
+        print param + '=' + str(arguments[param])
 
     # load train, dev and test data
     train_inputs, input_vocabulary, train_outputs, output_vocabulary = \
@@ -334,7 +300,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     else:
         trainer = dn.SimpleSGDTrainer(model)
 
-    trainer.set_clip_threshold(GRAD_CLIP)
+    trainer.set_clip_threshold(float(arguments['--grad-clip']))
     seen_examples_count = 0
     best_avg_train_loss = 99999999
     total_loss = 0
@@ -347,7 +313,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     train_len = len(train_outputs)
     dev_len = len(dev_inputs)
     train_bleu = -1
-    epochs_x = []
+    checkpoints_x = []
     train_loss_y = []
     dev_loss_y = []
     train_bleu_y = []
@@ -356,10 +322,12 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
     total_batches = 0
     train_loss_patience = 0
     train_loss_patience_threshold = 1000
+    max_patience = int(arguments['--max-patience'])
     e = 0
     log_path = results_file_path + '_log.txt'
 
     # progress bar init
+    # noinspection PyArgumentList
     widgets = [progressbar.Bar('>'), ' ', progressbar.ETA()]
     train_progress_bar = progressbar.ProgressBar(widgets=widgets, maxval=epochs).start()
 
@@ -413,13 +381,14 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             if i % 500 == 0 and i > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg \
 loss per example: {}'.format(e,
-                                             i,
-                                             batches_per_epoch,
-                                             i * batch_size,
-                                             train_len,
-                                             total_batches,
-                                             total_batches*batch_size,
-                                             avg_train_loss)
+                             i,
+                             batches_per_epoch,
+                             i * batch_size,
+                             train_len,
+                             total_batches,
+                             total_batches*batch_size,
+                             avg_train_loss)
+
                 # print sentences per second
                 end = time.time()
                 elapsed_seconds = end - start
@@ -463,7 +432,7 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
                     best_dev_epoch,
                     best_train_epoch)
 
-                if patience == MAX_PATIENCE:
+                if patience == max_patience:
                     print 'out of patience after {0} checkpoints'.format(str(e))
                     train_progress_bar.finish()
                     if plot:
@@ -471,69 +440,28 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
                     print 'checkpoint patience exceeded'
                     return model, params, e, best_train_epoch
 
-        # epoch evaluation
-        if EPOCH_EVAL:
-            print 'starting epoch evaluation'
-            dev_bleu, dev_loss = checkpoint_eval(params, dev_batch_size, dev_data, dev_inputs, dev_len, dev_order,
-                                                 dev_outputs, int2y, x2int, y2int)
-
-            log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
-
-            if dev_bleu >= best_dev_bleu:
-                best_dev_bleu = dev_bleu
-                best_dev_epoch = e
-
-                # save best model to disk
-                save_best_model(model, results_file_path)
-                print 'saved new best model'
-                patience = 0
-            else:
-                patience += 1
-
-            if dev_loss < best_dev_loss:
-                best_dev_loss = dev_loss
-
-            print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
-best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(e,
-                                                                                              avg_train_loss,
-                                                                                              dev_loss,
-                                                                                              dev_bleu,
-                                                                                              train_bleu,
-                                                                                              best_dev_bleu,
-                                                                                              best_train_bleu,
-                                                                                              patience,
-                                                                                              best_dev_epoch,
-                                                                                              best_train_epoch)
-
-            if patience == MAX_PATIENCE:
-                print 'out of patience after {0} checkpoints'.format(str(e))
-                train_progress_bar.finish()
+                # plotting results from checkpoint evaluation
                 if plot:
-                    plt.cla()
-                print 'epoch patience exceeded'
-                return model, params, e, best_train_epoch
+                    checkpoints_x.append(e)
+                    train_bleu_y.append(train_bleu)
+                    train_loss_y.append(avg_train_loss)
+                    dev_loss_y.append(dev_loss)
+                    dev_bleu_y.append(dev_bleu)
+                    with plt.style.context('fivethirtyeight'):
+                        p1, = plt.plot(checkpoints_x, dev_loss_y, label='dev loss')
+                        p2, = plt.plot(checkpoints_x, train_loss_y, label='train loss')
+                        p3, = plt.plot(checkpoints_x, dev_bleu_y, label='dev acc.')
+                        p4, = plt.plot(checkpoints_x, train_bleu_y, label='train acc.')
+                        plt.legend(loc='upper left', handles=[p1, p2, p3, p4])
+                    plt.savefig(results_file_path + 'plot.png')
 
-            # update parameters for plotting before ending epoch loop
-            epochs_x.append(e)
-            train_bleu_y.append(train_bleu)
-            train_loss_y.append(avg_train_loss)
-            dev_loss_y.append(dev_loss)
-            dev_bleu_y.append(dev_bleu)
-
-        # finished epoch
+        # update progress bar after completing epoch
         train_progress_bar.update(e)
 
-        if plot:
-            with plt.style.context('fivethirtyeight'):
-                p1, = plt.plot(epochs_x, dev_loss_y, label='dev loss')
-                p2, = plt.plot(epochs_x, train_loss_y, label='train loss')
-                p3, = plt.plot(epochs_x, dev_bleu_y, label='dev acc.')
-                p4, = plt.plot(epochs_x, train_bleu_y, label='train acc.')
-                plt.legend(loc='upper left', handles=[p1, p2, p3, p4])
-            plt.savefig(results_file_path + 'plot.png')
-
+    # update progress bar after completing training
     train_progress_bar.finish()
     if plot:
+        # clear plot when done
         plt.cla()
     print 'finished training. average loss: {} best epoch on dev: {} best epoch on train: {}'.format(
         str(avg_train_loss),
@@ -655,6 +583,7 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
         # mask the loss if at least one sentence is shorter
         if output_masks[i][-1] != 1:
             mask_expr = dn.inputVector(output_masks[i])
+            # noinspection PyArgumentList
             mask_expr = dn.reshape(mask_expr, (1,), batch_size)
             batch_loss = batch_loss * mask_expr
 
@@ -775,7 +704,7 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
     i = 0
 
     # run the decoder through the sequence and predict output symbols
-    while i < MAX_PREDICTION_LEN:
+    while i < max_prediction_len:
 
         # get current h of the decoder
         s = s.add_input(prev_output_vec)
@@ -814,7 +743,6 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
         return []
 
     dn.renew_cg()
-    beam_width = BEAM_WIDTH
     alphas_mtx = []
 
     # read model parameters
@@ -840,7 +768,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
     i = 0
 
     # expand another step if didn't reach max length and there's still beams to expand
-    while i < MAX_PREDICTION_LEN and len(beam[i - 1]) > 0:
+    while i < max_prediction_len and len(beam[i - 1]) > 0:
 
         # create all expansions from the previous beam:
         new_hypos = []
@@ -881,12 +809,12 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 
             # TODO: maybe should choose nbest from all expansions and not only from nbest of each hypothesis?
             # find best candidate outputs
-            n_best_indices = common.argmax(probs_val, beam_width)
+            n_best_indices = common.argmax(probs_val, beam_param)
             for index in n_best_indices:
                 p = probs_val[index]
                 new_seq = prefix_seq + [int2y[index]]
                 new_prob = prefix_prob * p
-                if new_seq[-1] == END_SEQ or i == MAX_PREDICTION_LEN - 1:
+                if new_seq[-1] == END_SEQ or i == max_prediction_len - 1:
                     # TODO: add to final states only if fits in k best?
                     # if found a complete sequence or max length - add to final states
                     final_states.append((new_seq[1:-1], new_prob))
@@ -895,13 +823,13 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 
         # add the most probable expansions from all hypotheses to the beam
         new_probs = np.array([p for (s, p, r, a) in new_hypos])
-        argmax_indices = common.argmax(new_probs, beam_width)
+        argmax_indices = common.argmax(new_probs, beam_param)
         beam[i] = [new_hypos[l] for l in argmax_indices]
         i += 1
 
     # get nbest results from final states found in search
     final_probs = np.array([p for (s, p) in final_states])
-    argmax_indices = common.argmax(final_probs, beam_width)
+    argmax_indices = common.argmax(final_probs, beam_param)
     nbest_seqs = [final_states[l] for l in argmax_indices]
 
     return nbest_seqs, alphas_mtx
@@ -910,7 +838,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 # Luong et. al 2015 attention mechanism:
 def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
-    if last_state_param:
+    if arguments['--last-state']:
         blstm_outputs = [blstm_outputs[-1]]
 
     # iterate through input states to compute attention scores
@@ -948,7 +876,6 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
 
             # best hypothesis, sequence without probability
             predicted_seq = nbest[0][0]
-
 
             # TODO: remove
             print 'input: {}\n'.format(' '.join(input_seq).encode('utf8'))
@@ -1005,6 +932,7 @@ def plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename=None):
     fig, ax = plt.subplots()
 
     image = np.array(alphas_mtx)
+    # noinspection PyUnresolvedReferences
     ax.imshow(image, cmap=plt.cm.Blues, interpolation='nearest')
 
     # fix x axis ticks density - input len (+2)
@@ -1027,136 +955,15 @@ def plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename=None):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    ts = time.time()
-    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
+    max_prediction_len = int(arguments['--max-pred'])
+    plot_param = arguments['--plot']
+    beam_param = int(arguments['--beam-size'])
+    results_file_path_param = arguments['--results']
 
-    # default values
-    if arguments['TRAIN_INPUTS_PATH']:
-        train_inputs_path_param = arguments['TRAIN_INPUTS_PATH']
-    else:
-        train_inputs_path_param = '../data/he_en_clean/train.tags.he-en.en.clean'
-
-    if arguments['TRAIN_OUTPUTS_PATH']:
-        train_outputs_path_param = arguments['TRAIN_OUTPUTS_PATH']
-    else:
-        train_outputs_path_param = '../data/he_en_clean/train.tags.he-en.he.clean'
-
-    if arguments['DEV_INPUTS_PATH']:
-        dev_inputs_path_param = arguments['DEV_INPUTS_PATH']
-    else:
-        dev_inputs_path_param = '../data/he_en_clean/IWSLT14.TED.dev2010.he-en.en.xml.clean'
-
-    if arguments['DEV_OUTPUTS_PATH']:
-        dev_outputs_path_param = arguments['DEV_OUTPUTS_PATH']
-    else:
-        dev_outputs_path_param = '../data/he_en_clean/IWSLT14.TED.dev2010.he-en.en.xml.clean'
-
-    if arguments['TEST_INPUTS_PATH']:
-        test_inputs_path_param = arguments['TEST_INPUTS_PATH']
-    else:
-        test_inputs_path_param = '../data/he_en_clean/IWSLT14.TED.tst2010.he-en.en.xml.clean'
-
-    if arguments['TEST_OUTPUTS_PATH']:
-        test_outputs_path_param = arguments['TEST_OUTPUTS_PATH']
-    else:
-        test_outputs_path_param = '../data/he_en_clean/IWSLT14.TED.tst2010.he-en.he.xml.clean'
-
-    if arguments['RESULTS_PATH']:
-        results_file_path_param = arguments['RESULTS_PATH'][0]
-    else:
-        results_file_path_param = '../results/results_' + st + '.txt'
-
-    if arguments['--input-dim']:
-        input_dim_param = int(arguments['--input-dim'])
-    else:
-        input_dim_param = INPUT_DIM
-
-    if arguments['--hidden-dim']:
-        hidden_dim_param = int(arguments['--hidden-dim'])
-    else:
-        hidden_dim_param = HIDDEN_DIM
-
-    if arguments['--epochs']:
-        epochs_param = int(arguments['--epochs'])
-    else:
-        epochs_param = EPOCHS
-
-    if arguments['--lstm-layers']:
-        layers_param = int(arguments['--lstm-layers'])
-    else:
-        layers_param = LAYERS
-
-    if arguments['--optimization']:
-        optimization_param = arguments['--optimization']
-    else:
-        optimization_param = OPTIMIZATION
-
-    if arguments['--reg']:
-        regularization_param = float(arguments['--reg'])
-    else:
-        regularization_param = REGULARIZATION
-
-    if arguments['--learning']:
-        learning_rate_param = float(arguments['--learning'])
-    else:
-        learning_rate_param = LEARNING_RATE
-
-    if arguments['--plot']:
-        plot_param = True
-    else:
-        plot_param = False
-
-    if arguments['--override']:
-        override_param = True
-    else:
-        override_param = False
-
-    if arguments['--eval']:
-        eval_param = True
-    else:
-        eval_param = False
-
-    if arguments['--ensemble']:
-        ensemble_param = arguments['--ensemble']
-    else:
-        ensemble_param = False
-
-    if arguments['--batch-size']:
-        batch_param = int(arguments['--batch-size'])
-    else:
-        batch_param = BATCH_SIZE
-
-    if arguments['--beam-size']:
-        beam_param = arguments['--beam-size']
-    else:
-        beam_param = 1
-
-    if arguments['--vocab-size']:
-        # noinspection PyUnresolvedReferences
-        vocab_param = int(arguments['--vocab-size'])
-    else:
-        # noinspection PyUnresolvedReferences
-        vocab_param = MAX_VOCAB_SIZE
-
-    if arguments['--eval-after']:
-        eval_after_param = int(arguments['--eval-after'])
-    else:
-        eval_after_param = EVAL_AFTER
-
-    if arguments['--max-len']:
-        max_len_param = int(arguments['--max-len'])
-    else:
-        max_len_param = MAX_LEN
-
-    if arguments['--last-state']:
-        last_state_param = True
-    else:
-        last_state_param = False
-
-    print arguments
-
-    main(train_inputs_path_param, train_outputs_path_param, dev_inputs_path_param, dev_outputs_path_param,
-         test_inputs_path_param, test_outputs_path_param, results_file_path_param, input_dim_param, hidden_dim_param,
-         epochs_param, layers_param, optimization_param, regularization_param, learning_rate_param, plot_param,
-         override_param, eval_param, ensemble_param, batch_param, beam_param, vocab_param, eval_after_param,
-         max_len_param, last_state_param)
+    main(arguments['TRAIN_INPUTS_PATH'], arguments['TRAIN_OUTPUTS_PATH'], arguments['DEV_INPUTS_PATH'],
+         arguments['DEV_OUTPUTS_PATH'], arguments['TEST_INPUTS_PATH'], arguments['TEST_OUTPUTS_PATH'],
+         arguments['RESULTS_PATH'][0], int(arguments['--input-dim']), int(arguments['--hidden-dim']),
+         int(arguments['--epochs']), int(arguments['--lstm-layers']), arguments['--optimization'],
+         bool(arguments['--plot']), bool(arguments['--override']), bool(arguments['--eval']), arguments['--ensemble'],
+         int(arguments['--batch-size']), int(arguments['--vocab-size']), int(arguments['--eval-after']),
+         int(arguments['--max-len']))
