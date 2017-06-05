@@ -878,6 +878,7 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
             predicted_seq = nbest[0][0]
 
             # TODO: remove
+            print '{}/{}\n'.format(i, data_len)
             print 'input: {}\n'.format(' '.join(input_seq).encode('utf8'))
             for k, seq in enumerate(nbest):
                 print '{}-best: {}'.format(k, ' '.join(seq[0]).encode('utf8') + '\n')
