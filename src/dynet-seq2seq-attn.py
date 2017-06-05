@@ -6,8 +6,8 @@ Usage:
   dynet-seq2seq-attn.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--dynet-autobatch AUTO] [--input-dim=INPUT]
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
-  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH
-  DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
+  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred] TRAIN_INPUTS_PATH
+  TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
   TRAIN_INPUTS_PATH    train inputs path
@@ -67,12 +67,13 @@ BEGIN_SEQ = '<s>'
 END_SEQ = '</s>'
 
 # TODO: add masking for the input (zero attention weights)
-# TODO: measure sentences per second while decoding
-# TODO: save model every checkpoint and not only when best model
+# TODO: measure sentences per second while *decoding*
+# TODO: save model every checkpoint and not only if best model
 # TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring
 # TODO: debug with non english output (i.e. reverse translation from en to he)
 # TODO: print n-best lists to file
+# TODO: rename model parameters as they are named in a specific paper
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
