@@ -960,7 +960,7 @@ if __name__ == '__main__':
     max_prediction_len = int(arguments['--max-pred'])
     plot_param = arguments['--plot']
     beam_param = int(arguments['--beam-size'])
-    results_file_path_param = arguments['--results']
+    results_file_path_param = arguments['RESULTS_PATH']
 
     main(arguments['TRAIN_INPUTS_PATH'], arguments['TRAIN_OUTPUTS_PATH'], arguments['DEV_INPUTS_PATH'],
          arguments['DEV_OUTPUTS_PATH'], arguments['TEST_INPUTS_PATH'], arguments['TEST_OUTPUTS_PATH'],
