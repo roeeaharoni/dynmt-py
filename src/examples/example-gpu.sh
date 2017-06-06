@@ -6,7 +6,7 @@ base_path=/home/nlp/aharonr6
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 
-python ../dynet-seq2seq-attn.py --dynet-mem 8000 --dynet-gpu-ids 3 --input-dim=100 --hidden-dim=500 --epochs=100 --lstm-layers=1 \
+python ../dynmt.py --dynet-mem 8000 --dynet-gpu-ids 3 --input-dim=100 --hidden-dim=500 --epochs=100 --lstm-layers=1 \
 --optimization=ADADELTA --batch-size=32 --beam-size=10 \
 $base_path/git/research/nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.de \
 $base_path/git/research/nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.en \

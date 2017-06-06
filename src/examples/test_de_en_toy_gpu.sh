@@ -6,7 +6,7 @@ base_path=/home/nlp/aharonr6
 
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
-python ../dynet-seq2seq-attn.py --dynet-gpu-ids 1 --dynet-mem 4000 --input-dim=200 --hidden-dim=500 --epochs=100 --lstm-layers=1 \
+python ../dynmt.py --dynet-gpu-ids 1 --dynet-mem 4000 --input-dim=200 --hidden-dim=500 --epochs=100 --lstm-layers=1 \
 --optimization=ADADELTA --batch-size=1 --beam-size=10 --plot --eval-after=1000 \
 $base_path//git/dynet-seq2seq-attn/data/toy_de.txt \
 $base_path/git/dynet-seq2seq-attn/data/toy_en.txt \
