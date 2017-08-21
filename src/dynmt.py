@@ -210,8 +210,8 @@ def predict_with_ensemble_majority(input_vocabulary, output_vocabulary, x2int, y
     return majority_predicted_sequences
 
 
-def save_best_model(model, results_file_path):
-    tmp_model_path = results_file_path + '_bestmodel.txt'
+def save_best_model(model, model_file_path):
+    tmp_model_path = model_file_path + '_bestmodel.txt'
     print 'saving to ' + tmp_model_path
     model.save(tmp_model_path)
     print 'saved to {0}'.format(tmp_model_path)
@@ -222,14 +222,14 @@ def load_best_model(input_vocabulary, output_vocabulary, results_file_path, inpu
     model, params = build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, layers)
 
     print 'trying to load model from: {}'.format(tmp_model_path)
-    model.load(tmp_model_path)
+    model.populate(tmp_model_path)
     return model, params
 
 
 def build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, layers):
     print 'creating model...'
 
-    model = dn.Model()
+    model = dn.ParameterCollection()
 
     params = {}
 
