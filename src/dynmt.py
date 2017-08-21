@@ -3,7 +3,7 @@
 Sequence to sequence learning with an attention mechanism implemented using dynet's python bindings.
 
 Usage:
-  dynmt.py [--dynet-mem MEM] [--dynet-devices DEV] [--dynet-autobatch AUTO] [--input-dim=INPUT]
+  dynmt.py [--dynet-mem MEM] [--dynet-gpus GPU] [--dynet-devices DEV] [--dynet-autobatch AUTO] [--input-dim=INPUT]
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED]
@@ -23,6 +23,7 @@ Options:
   -h --help                     show this help message and exit
   --dynet-mem MEM               allocates MEM bytes for dynet
   --dynet-devices DEV           CPU/GPU ids to use
+  --dynet-gpus GPU              how many gpus to use
   --dynet-autobatch AUTO        switch auto-batching on
   --input-dim=INPUT             input embeddings dimension [default: 300]
   --hidden-dim=HIDDEN           LSTM hidden layer dimension [default: 100]
