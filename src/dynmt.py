@@ -3,7 +3,7 @@
 Sequence to sequence learning with an attention mechanism implemented using dynet's python bindings.
 
 Usage:
-  dynmt.py [--dynet-mem MEM] [--dynet-gpu-ids IDS] [--dynet-autobatch AUTO] [--input-dim=INPUT]
+  dynmt.py [--dynet-mem MEM] [--dynet-devices DEV] [--dynet-autobatch AUTO] [--input-dim=INPUT]
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED]
