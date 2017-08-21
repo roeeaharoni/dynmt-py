@@ -22,7 +22,7 @@ Arguments:
 Options:
   -h --help                     show this help message and exit
   --dynet-mem MEM               allocates MEM bytes for dynet
-  --dynet-gpu-ids IDS           GPU ids to use
+  --dynet-devices DEV           CPU/GPU ids to use
   --dynet-autobatch AUTO        switch auto-batching on
   --input-dim=INPUT             input embeddings dimension [default: 300]
   --hidden-dim=HIDDEN           LSTM hidden layer dimension [default: 100]
