@@ -356,6 +356,9 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             batch_outputs = [x[1] for x in train_data[batch_start_index:batch_start_index + batch_size]]
             actual_batch_size = len(batch_inputs)
 
+            print 'batch {}'.format(i)
+            print batch_inputs
+
             # skip empty batches
             if actual_batch_size == 0 or len(batch_inputs[0]) == 0:
                 continue
