@@ -853,16 +853,22 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
 
     np_masks = np.array(input_masks)
+    dn_masks = dn.sparse_inputTensor([len(input_masks), len(input_masks[0])], np_masks, np_masks.shape)
 
     # input masks dim is seqlen x batch_size
     print 'input masks size (for single step): ' + str(np_masks.shape)
-    # print 'max_seq_len:' + str(len(blstm_outputs))
 
     # normalize scores using softmax
     concatenated = dn.concatenate(scores)
+    print 'dynet dim for scores: ' + str(concatenated.dim)
+    print 'dynet dim for masks: ' + str(dn_masks.dim)
+
+    masked_scores = dn.cmult(concatenated, dn_masks)
 
     # scores dim is seqlen x batch_size
     print 'scores size (for single step): ' + str(concatenated.npvalue().shape)
+
+
 
     alphas = dn.softmax(concatenated)
 
