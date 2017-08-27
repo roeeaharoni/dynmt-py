@@ -855,7 +855,7 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     # input masks dim should be batch_size x seqlen
     # scores dim should be batch_size x seqlen
     print 'scores size (for single step): ' + str(len(scores)) + ' x ' + str(scores[0].npvalue().shape)
-    print 'input masks size (for single step)' + str(input_masks)
+    print 'input masks size (for single step): ' + str(len(input_masks)) + ' x ' + str(len(input_masks[0]))
     # print 'max_seq_len:' + str(len(blstm_outputs))
 
     # normalize scores using softmax
