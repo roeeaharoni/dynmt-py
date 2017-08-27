@@ -68,6 +68,7 @@ from matplotlib import pyplot as plt
 UNK = 'UNK'
 BEGIN_SEQ = '<s>'
 END_SEQ = '</s>'
+PAD = 'PAD'
 
 # TODO: add masking for the input (zero-out attention weights)
 # TODO: measure sentences per second while *decoding*
@@ -104,6 +105,10 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     # add unk symbols to vocabularies
     input_vocabulary.append(UNK)
     output_vocabulary.append(UNK)
+
+    # add pad symbols to vocabularies
+    input_vocabulary.append(PAD)
+    output_vocabulary.append(PAD)
 
     # add begin/end sequence symbols to vocabularies
     input_vocabulary.append(BEGIN_SEQ)
@@ -526,7 +531,7 @@ def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, train_acc
                                                         dev_accuracy))
 
 
-def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int):
+def compute_batch_loss(params, batch_input_seqs, batch_output_seqs, x2int, y2int):
     # renew computation graph per batch
     dn.renew_cg()
 
@@ -538,18 +543,19 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
     v_a = dn.parameter(params['v_a'])
     w_a = dn.parameter(params['w_a'])
 
-    batch_size = len(input_batch_seqs)
+    batch_size = len(batch_input_seqs)
 
     # encode batch with bilstm encoder: each element represents one step in time, and is a matrix of 2*h x batch size
     # for example, for sentence length of 12, blstm_outputs wil be: 12 x 2 x 100 x 16
+    # note: also adding begin_seq, end_seq symbols here!
     blstm_outputs, input_masks = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'],
-                                                     params['encoder_rrnn'], input_batch_seqs)
+                                                     params['encoder_rrnn'], batch_input_seqs)
 
     # initialize the decoder rnn
     s_0 = params['decoder_rnn'].initial_state()
     s = s_0
 
-    # concatenate the end seq symbols
+    # concatenate the end seq symbols to the output sequence
     padded_batch_output_seqs = [seq + [END_SEQ] for seq in batch_output_seqs]
 
     # get output word ids for each step of the decoder
@@ -611,7 +617,7 @@ def get_batch_word_ids(batch_seqs, x2int):
     masks = []
     batch_word_ids = []
 
-    # need to maintain longest seq len since output seqs are not sorted by length
+    # need to maintain longest seq len since *output* seqs are not sorted by length
     max_seq_len = len(batch_seqs[0])
     for seq in batch_seqs:
         if len(seq) > max_seq_len:
@@ -628,7 +634,7 @@ def get_batch_word_ids(batch_seqs, x2int):
         for seq in batch_seqs:
             # pad short seqs
             if i > len(seq) - 1:
-                batch_word_ids[i].append(x2int[END_SEQ])
+                batch_word_ids[i].append(x2int[PAD])
             else:
                 if seq[i] in x2int:
                     batch_word_ids[i].append(x2int[seq[i]])
@@ -644,24 +650,17 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
     r_outputs = []
     final_outputs = []
 
+    to_encode = [[BEGIN_SEQ] + s + [END_SEQ] for s in input_seq_batch]
+
     # get the word ids for each step, after padding
-    word_ids, masks, tot_chars = get_batch_word_ids(input_seq_batch, x2int)
-
-    # initialize with BEGIN_SEQ symbol
-    init_ids = [x2int[BEGIN_SEQ]] * len(input_seq_batch)
-
-    # finish with END_SEQ
-    end_ids = [x2int[END_SEQ]] * len(input_seq_batch)
-
-    # concatenate the begin seq / end seq symbols
-    word_ids = [init_ids] + word_ids + [end_ids]
+    word_ids, masks, tot_chars = get_batch_word_ids(to_encode, x2int)
 
     # init rnns
     f_state = encoder_frnn.initial_state()
     r_state = encoder_rrnn.initial_state()
 
-    # max seq len after padding
-    max_seq_len = len(input_seq_batch[0]) + 2
+    # max seq len after padding (assuming first sentence is longest since sorting by length in train_model())
+    max_seq_len = len(to_encode[0])
 
     # iterate in both directions
     for i in xrange(max_seq_len):
