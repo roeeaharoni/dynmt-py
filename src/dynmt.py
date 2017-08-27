@@ -508,8 +508,8 @@ def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order
             continue
 
         # TODO: remove
-        print 'dev batch {}'.format(i)
-        print 'batch sent len {}'.format(len(batch_inputs[0]))
+        # print 'dev batch {}'.format(i)
+        # print 'batch sent len {}'.format(len(batch_inputs[0]))
 
         loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
         total_dev_loss += loss.value()
@@ -595,7 +595,7 @@ def compute_batch_loss(params, batch_input_seqs, batch_output_seqs, x2int, y2int
         batch_loss = dn.pickneglogsoftmax_batch(h, step_word_ids)
 
         # mask the loss if at least one sentence is shorter
-        if output_masks[i][-1] != 1:
+        if output_masks and output_masks[i][-1] != 1:
             mask_expr = dn.inputVector(output_masks[i])
             # noinspection PyArgumentList
             mask_expr = dn.reshape(mask_expr, (1,), batch_size)
@@ -615,9 +615,9 @@ def compute_batch_loss(params, batch_input_seqs, batch_output_seqs, x2int, y2int
     return total_batch_loss
 
 
-# get list of word ids for each timestep in the batch, do padding and masking
+# get list of word ids for each timestep in the batch, do padding and masking. If batch size is 1 return None as masks
 def get_batch_word_ids(batch_seqs, x2int):
-    tot_chars = 0
+    net_len = 0
     masks = []
     batch_word_ids = []
 
@@ -628,10 +628,15 @@ def get_batch_word_ids(batch_seqs, x2int):
             max_seq_len = len(seq)
 
     for i in range(max_seq_len):
-        # masking
-        mask = [(1 if len(seq) > i else 0) for seq in batch_seqs]
-        masks.append(mask)
-        tot_chars += sum(mask)
+        if len(batch_seqs) > 1:
+            # masking
+            mask = [(1 if len(seq) > i else 0) for seq in batch_seqs]
+            masks.append(mask)
+            net_len += sum(mask)
+        else:
+            # no masking
+            masks = None
+            net_len = len(batch_seqs[0])
         batch_word_ids.append([])
 
         # get word ids
@@ -645,7 +650,7 @@ def get_batch_word_ids(batch_seqs, x2int):
                 else:
                     batch_word_ids[i].append(x2int[UNK])
 
-    return batch_word_ids, masks, tot_chars
+    return batch_word_ids, masks, net_len
 
 
 # bilstm encode batch, each element in the result is a matrix of 2*h x batch size elements
@@ -854,30 +859,24 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     w_a_h_t = w_a * h_t
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
 
-    # multiply with masks
-    if len(input_masks) > 1:
-        is_batched = True
-    else:
-        is_batched = False
 
-    dn_masks = dn.inputTensor(input_masks, batched=is_batched)
-
-    # normalize scores using softmax
     concatenated = dn.concatenate(scores)
+    if input_masks:
+        # if batching, multiply attention scores with input masks
+        dn_masks = dn.inputTensor(input_masks, batched=True)
+        concatenated = dn.cmult(concatenated, dn_masks)
 
-    masked_scores = dn.cmult(concatenated, dn_masks)
+    # normalize scores
+    alphas = dn.softmax(concatenated)
+
     # print "MASKS"
     # print dn_masks.npvalue()
     # print "SCORES"
     # print concatenated.npvalue()
     # print "MASKED SCORES"
     # print masked_scores.npvalue()
-
     # scores dim is seqlen x batch_size
     # print 'scores size (for single step): ' + str(concatenated.npvalue().shape)
-
-    # TODO: alphas = dn.softmax(masked_scores)
-    alphas = dn.softmax(masked_scores)
 
     # compute context vector with weighted sum for each seq in batch
     bo = dn.concatenate_cols(blstm_outputs)
