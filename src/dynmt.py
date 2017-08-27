@@ -361,8 +361,8 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                 continue
 
             # compute batch loss
-            # print 'batch {} seq lens'.format(i)
-            # print [len(s) for s in batch_inputs]
+            print 'batch {} seq lens'.format(i)
+            print [len(s) for s in batch_inputs]
             loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
 
             # update parameters
