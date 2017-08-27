@@ -356,14 +356,13 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             batch_outputs = [x[1] for x in train_data[batch_start_index:batch_start_index + batch_size]]
             actual_batch_size = len(batch_inputs)
 
-            print 'batch {} seq lens'.format(i)
-            print [len(s) for s in batch_inputs]
-
             # skip empty batches
             if actual_batch_size == 0 or len(batch_inputs[0]) == 0:
                 continue
 
             # compute batch loss
+            # print 'batch {} seq lens'.format(i)
+            # print [len(s) for s in batch_inputs]
             loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
 
             # update parameters
@@ -853,7 +852,10 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     w_a_h_t = w_a * h_t
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
     # print 'SCORES:' + str([s.npvalue() for s in scores])
-    print 'MASKS' + str(input_masks)
+    # input masks dim should be batch_size x seqlen
+    # scores dim should be batch_size x seqlen
+    print 'scores size (for single step): ' + str(len(scores)) + ' x ' + str(scores[0].npvalue().shape)
+    print 'input masks size (for single step)' + str(input_masks)
     # print 'max_seq_len:' + str(len(blstm_outputs))
 
     # normalize scores using softmax
