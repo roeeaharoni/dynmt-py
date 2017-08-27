@@ -850,8 +850,8 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     # scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
     w_a_h_t = w_a * h_t
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
-    print scores
-    print input_masks
+    print scores.npvalue().shape
+    print len(input_masks)
 
     # normalize scores using softmax
     alphas = dn.softmax(dn.concatenate(scores))
