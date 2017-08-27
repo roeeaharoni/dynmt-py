@@ -69,7 +69,7 @@ UNK = 'UNK'
 BEGIN_SEQ = '<s>'
 END_SEQ = '</s>'
 
-# TODO: add masking for the input (zero attention weights)
+# TODO: add masking for the input (zero-out attention weights)
 # TODO: measure sentences per second while *decoding*
 # TODO: save model every checkpoint and not only if best model
 # TODO: add ensembling support by interpolating probabilities
@@ -542,8 +542,8 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
 
     # encode batch with bilstm encoder: each element represents one step in time, and is a matrix of 2*h x batch size
     # for example, for sentence length of 12, blstm_outputs wil be: 12 x 2 x 100 x 16
-    blstm_outputs = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
-                                        input_batch_seqs)
+    blstm_outputs, input_masks = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'],
+                                                     params['encoder_rrnn'], input_batch_seqs)
 
     # initialize the decoder rnn
     s_0 = params['decoder_rnn'].initial_state()
@@ -676,7 +676,7 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
         concatenated = dn.concatenate([f_outputs[i], r_outputs[max_seq_len - i - 1]])
         final_outputs.append(concatenated)
 
-    return final_outputs
+    return final_outputs, masks
 
 
 def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
@@ -695,7 +695,7 @@ def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
     w_a = dn.parameter(params['w_a'])
 
     # encode input sequence
-    blstm_outputs = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
+    blstm_outputs, input_masks = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
                                         [input_seq])
 
     # initialize the decoder rnn
@@ -758,8 +758,8 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
     w_a = dn.parameter(params['w_a'])
 
     # encode input sequence
-    blstm_outputs = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
-                                        [input_seq])
+    blstm_outputs, input_masks = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'],
+                                                     params['encoder_rrnn'], [input_seq])
 
     # complete sequences and their probabilities
     final_states = []
@@ -840,7 +840,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 
 
 # Luong et. al 2015 attention mechanism:
-def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
+def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
     if arguments['--last-state']:
         blstm_outputs = [blstm_outputs[-1]]
@@ -850,6 +850,8 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a):
     # scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
     w_a_h_t = w_a * h_t
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
+    print scores
+    print input_masks
 
     # normalize scores using softmax
     alphas = dn.softmax(dn.concatenate(scores))
