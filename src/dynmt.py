@@ -853,7 +853,7 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
 
     np_masks = np.array(input_masks)
-    dn_masks = dn.sparse_inputTensor([len(input_masks), len(input_masks[0])], np_masks.flatten(), np_masks.shape)
+    dn_masks = dn.sparse_inputTensor([[len(input_masks)], [len(input_masks[0])]], np_masks.flatten(), np_masks.shape)
 
     # input masks dim is seqlen x batch_size
     print 'input masks size (for single step): ' + str(np_masks.shape)
