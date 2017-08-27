@@ -361,8 +361,10 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
                 continue
 
             # compute batch loss
-            print 'batch {} seq lens'.format(i)
-            print [len(s) for s in batch_inputs]
+
+            # debug prints for batch seq lengths
+            # print 'batch {} seq lens'.format(i)
+            # print [len(s) for s in batch_inputs]
             loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
 
             # update parameters
@@ -863,22 +865,19 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     # normalize scores using softmax
     concatenated = dn.concatenate(scores)
 
-    print 'dynet dim for scores: ' + str(concatenated.dim())
-    print 'dynet dim for masks: ' + str(dn_masks.dim())
-
     masked_scores = dn.cmult(concatenated, dn_masks)
-    print "MASKS"
-    print dn_masks.npvalue()
-    print "SCORES"
-    print concatenated.npvalue()
-    print "MASKED SCORES"
-    print masked_scores.npvalue()
+    # print "MASKS"
+    # print dn_masks.npvalue()
+    # print "SCORES"
+    # print concatenated.npvalue()
+    # print "MASKED SCORES"
+    # print masked_scores.npvalue()
 
     # scores dim is seqlen x batch_size
-    print 'scores size (for single step): ' + str(concatenated.npvalue().shape)
+    # print 'scores size (for single step): ' + str(concatenated.npvalue().shape)
 
     # TODO: alphas = dn.softmax(masked_scores)
-    alphas = dn.softmax(concatenated)
+    alphas = dn.softmax(masked_scores)
 
     # compute context vector with weighted sum for each seq in batch
     bo = dn.concatenate_cols(blstm_outputs)
