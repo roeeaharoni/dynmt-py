@@ -575,7 +575,7 @@ def compute_batch_loss(params, input_batch_seqs, batch_output_seqs, x2int, y2int
         decoder_rnn_output = s.output()
 
         # compute attention context vector for each sequence in the batch (returns 2h x batch size matrix)
-        attention_output_vector, alphas = attend(blstm_outputs, decoder_rnn_output, w_c, v_a, w_a, u_a)
+        attention_output_vector, alphas = attend(blstm_outputs, decoder_rnn_output, w_c, v_a, w_a, u_a, input_masks)
 
         # compute output scores (returns vocab_size x batch size matrix)
         # h = readout * attention_output_vector + bias
@@ -679,7 +679,7 @@ def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_s
     return final_outputs, masks
 
 
-def predict_output_sequence(params, input_seq, x2int, y2int, int2y):
+def predict_greedy(params, input_seq, x2int, y2int, int2y):
     dn.renew_cg()
     alphas_mtx = []
 
@@ -889,7 +889,7 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
             for k, seq in enumerate(nbest):
                 print '{}-best: {}'.format(k, ' '.join(seq[0]).encode('utf8') + '\n')
         else:
-            predicted_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
+            predicted_seq, alphas_mtx = predict_greedy(params, input_seq, x2int, y2int, int2y)
         if i % 100 == 0 and i > 0:
             print 'predicted {} examples out of {}'.format(i, data_len)
 
@@ -935,7 +935,7 @@ def evaluate_model(predicted_sequences, inputs, outputs, print_results=False):
 
 def plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename=None):
     # predict
-    output_seq, alphas_mtx = predict_output_sequence(params, input_seq, x2int, y2int, int2y)
+    output_seq, alphas_mtx = predict_greedy(params, input_seq, x2int, y2int, int2y)
     fig, ax = plt.subplots()
 
     image = np.array(alphas_mtx)
