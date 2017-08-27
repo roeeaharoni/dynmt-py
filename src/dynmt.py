@@ -851,15 +851,20 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     # scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
     w_a_h_t = w_a * h_t
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
-    # print 'SCORES:' + str([s.npvalue() for s in scores])
-    # input masks dim should be batch_size x seqlen
-    # scores dim should be batch_size x seqlen
-    print 'scores size (for single step): ' + str(len(scores)) + ' x ' + str(scores[0].npvalue().shape)
+
+    # input masks dim is seqlen x batch_size
     print 'input masks size (for single step): ' + str(len(input_masks)) + ' x ' + str(len(input_masks[0]))
     # print 'max_seq_len:' + str(len(blstm_outputs))
 
+
+
     # normalize scores using softmax
-    alphas = dn.softmax(dn.concatenate(scores))
+    concatenated = dn.concatenate(scores)
+
+    # scores dim is seqlen x batch_size
+    print 'scores size (for single step): ' + str(concatenated.npvalue().shape)
+
+    alphas = dn.softmax(concatenated)
 
     # compute context vector with weighted sum for each seq in batch
     bo = dn.concatenate_cols(blstm_outputs)
