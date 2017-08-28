@@ -6,9 +6,9 @@ Usage:
   dynmt.py [--dynet-mem MEM] [--dynet-gpus GPU] [--dynet-devices DEV] [--dynet-autobatch AUTO] [--input-dim=INPUT]
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
-  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED]
-  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH
-  TEST_OUTPUTS_PATH RESULTS_PATH...
+  [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED] [--compact]
+  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH
+  DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
   TRAIN_INPUTS_PATH    train inputs path
@@ -45,6 +45,7 @@ Options:
   --ensemble=ENSEMBLE           ensemble model paths separated by a comma
   --last-state                  only use last encoder state
   --eval                        skip training, do only evaluation
+  --compact                     use compact lstm builder
 """
 
 import numpy as np
@@ -70,14 +71,14 @@ BEGIN_SEQ = '<s>'
 END_SEQ = '</s>'
 PAD = 'PAD'
 
-# TODO: add masking for the input (zero-out attention weights)
+# add masking for the input (zero-out attention weights) - done
 # TODO: measure sentences per second while *decoding*
 # TODO: save model every checkpoint and not only if best model
 # TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring
-# TODO: debug with non english output (i.e. reverse translation from en to he)
+# TODO: debug with non-english output (i.e. reverse translation from en to he)
 # TODO: print n-best lists to file
-# TODO: rename model parameters as they are named in a specific paper
+# TODO: rename model parameters the same way they are named in a specific paper
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
@@ -253,8 +254,12 @@ def build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, laye
     params['bias'] = model.add_parameters(len(input_vocabulary))
 
     # rnn's
-    params['encoder_frnn'] = dn.LSTMBuilder(layers, input_dim, hidden_dim, model)
-    params['encoder_rrnn'] = dn.LSTMBuilder(layers, input_dim, hidden_dim, model)
+    if bool(arguments['--compact']):
+        params['encoder_frnn'] = dn.CompactVanillaLSTMBuilder(layers, input_dim, hidden_dim, model)
+        params['encoder_rrnn'] = dn.CompactVanillaLSTMBuilder(layers, input_dim, hidden_dim, model)
+    else:
+        params['encoder_frnn'] = dn.LSTMBuilder(layers, input_dim, hidden_dim, model)
+        params['encoder_rrnn'] = dn.LSTMBuilder(layers, input_dim, hidden_dim, model)
 
     # attention MLPs - Luong-style with extra v_a from Bahdanau
 
