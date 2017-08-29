@@ -74,6 +74,7 @@ PAD = 'PAD'
 # add masking for the input (zero-out attention weights) - done
 # TODO: measure sentences per second while *decoding*
 # TODO: save model every checkpoint and not only if best model
+# TODO: write training metadata to file: epoch, update, best score, best perplexity...
 # TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring
 # TODO: debug with non-english output (i.e. reverse translation from en to he)
@@ -372,9 +373,11 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             # print [len(s) for s in batch_inputs]
             loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
 
-            # update parameters
+            # forward pass
             total_loss += loss.scalar_value()
             loss.backward()
+
+            # update parameters
             trainer.update()
 
             seen_examples_count += actual_batch_size
@@ -460,7 +463,7 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
 
                 # plotting results from checkpoint evaluation
                 if plot:
-                    checkpoints_x.append(e)
+                    checkpoints_x.append(total_batches)
                     train_bleu_y.append(train_bleu)
                     train_loss_y.append(avg_train_loss)
                     dev_loss_y.append(dev_loss)
