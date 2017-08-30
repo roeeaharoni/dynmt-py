@@ -46,10 +46,12 @@ Options:
   --last-state                  only use last encoder state
   --eval                        skip training, do only evaluation
   --compact                     use compact lstm builder
+  --models-to-save              amount of models to save during training [default: 10]
 """
 
 import numpy as np
 import random
+import glob
 import prepare_data
 import progressbar
 import time
@@ -72,8 +74,8 @@ END_SEQ = '</s>'
 PAD = 'PAD'
 
 # add masking for the input (zero-out attention weights) - done
+# save k models every checkpoint and not only if best model
 # TODO: measure sentences per second while *decoding*
-# TODO: save model every checkpoint and not only if best model
 # TODO: write training metadata to file: epoch, update, best score, best perplexity...
 # TODO: add ensembling support by interpolating probabilities
 # TODO: OOP refactoring
@@ -83,8 +85,8 @@ PAD = 'PAD'
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
-         results_file_path, input_dim, hidden_dim, epochs, layers, optimization, plot,
-         override, eval_only, ensemble, batch_size, vocab_size, eval_after, max_len):
+         results_file_path, input_dim, hidden_dim, epochs, layers, optimization, plot, override, eval_only, ensemble,
+         batch_size, vocab_size, eval_after, max_len):
 
     # write model config file (.modelinfo)
     common.write_model_config_file(arguments, train_inputs_path, train_outputs_path, dev_inputs_path,
@@ -225,6 +227,21 @@ def save_best_model(model, model_file_path):
     print 'saved to {0}'.format(tmp_model_path)
 
 
+def save_model(model, model_file_path, updates, models_to_save = None):
+    tmp_model_path = model_file_path + '_{}.txt'.format(updates)
+    print 'saving to ' + tmp_model_path
+    model.save(tmp_model_path)
+    print 'saved to {0}'.format(tmp_model_path)
+
+    if models_to_save:
+        search_dir = '/'.join(model_file_path)
+        files = filter(os.path.isfile, glob.glob(search_dir + '*[0-9].*'))
+        files.sort(key=lambda x: os.path.getmtime(x))
+        if len(files) > models_to_save:
+            print 'removing {}'.format(files[-1])
+            os.remove(files[-1])
+
+
 def load_best_model(input_vocabulary, output_vocabulary, results_file_path, input_dim, hidden_dim, layers):
     tmp_model_path = results_file_path + '_bestmodel.txt'
     model, params = build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, layers)
@@ -267,16 +284,16 @@ def build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, laye
     # concatenation layer for h (hidden dim), c (2 * hidden_dim)
     params['w_c'] = model.add_parameters((3 * hidden_dim, 3 * hidden_dim))
 
-    # concatenation layer for h_input (2*hidden_dim), h_output (hidden_dim)
+    # concatenation layer for h_input (hidden_dim), h_output (hidden_dim)
     params['w_a'] = model.add_parameters((hidden_dim, hidden_dim))
 
     # concatenation layer for h (hidden dim), c (2 * hidden_dim)
     params['u_a'] = model.add_parameters((hidden_dim, 2 * hidden_dim))
 
-    # concatenation layer for h_input (2*hidden_dim), h_output (hidden_dim)
+    # concatenation layer for h_input (2 * hidden_dim), h_output (hidden_dim)
     params['v_a'] = model.add_parameters((1, hidden_dim))
 
-    # 1 * HIDDEN_DIM - gets only the feedback input
+    # 3 * HIDDEN_DIM + input_dim - gets the feedback output embedding, "input feeding" approach for attn
     params['decoder_rnn'] = dn.LSTMBuilder(layers, 3 * hidden_dim + input_dim, hidden_dim, model)
 
     print 'finished creating model'
@@ -425,7 +442,7 @@ loss per example: {}'.format(e,
                                                      dev_outputs, int2y, x2int, y2int)
 
                 log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
-
+                save_model(model, results_file_path, total_batches, models_to_save = int(arguments['--models-to-save']))
                 if dev_bleu >= best_dev_bleu:
                     best_dev_bleu = dev_bleu
                     best_dev_epoch = e
