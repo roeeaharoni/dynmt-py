@@ -3,6 +3,14 @@ import codecs
 import re
 import numpy as np
 
+
+# consts
+UNK = 'UNK'
+BEGIN_SEQ = '<s>'
+END_SEQ = '</s>'
+PAD = 'PAD'
+
+
 def argmax(arr, k):
 
     k = min(k, arr.size)
@@ -79,3 +87,41 @@ def evaluate_bleu_from_files(gold_outputs_path, output_file_path):
     os.remove(bleu_path)
 
     return float(bleu)
+
+
+# get list of word ids for each timestep in the batch, do padding and masking. If batch size is 1 return None as masks
+def get_batch_word_ids(batch_seqs, x2int):
+    net_len = 0
+    masks = []
+    batch_word_ids = []
+
+    # need to maintain longest seq len since *output* seqs are not sorted by length
+    max_seq_len = len(batch_seqs[0])
+    for seq in batch_seqs:
+        if len(seq) > max_seq_len:
+            max_seq_len = len(seq)
+
+    for i in range(max_seq_len):
+        if len(batch_seqs) > 1:
+            # masking
+            mask = [(1 if len(seq) > i else 0) for seq in batch_seqs]
+            masks.append(mask)
+            net_len += sum(mask)
+        else:
+            # no masking
+            masks = None
+            net_len = len(batch_seqs[0])
+        batch_word_ids.append([])
+
+        # get word ids
+        for seq in batch_seqs:
+            # pad short seqs
+            if i > len(seq) - 1:
+                batch_word_ids[i].append(x2int[PAD])
+            else:
+                if seq[i] in x2int:
+                    batch_word_ids[i].append(x2int[seq[i]])
+                else:
+                    batch_word_ids[i].append(x2int[UNK])
+
+    return batch_word_ids, masks, net_len

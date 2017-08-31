@@ -7,8 +7,8 @@ Usage:
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED] [--compact]
-  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH
-  DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
+  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] [--models-to-save=SAVE] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH
+  DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
   TRAIN_INPUTS_PATH    train inputs path
@@ -46,7 +46,7 @@ Options:
   --last-state                  only use last encoder state
   --eval                        skip training, do only evaluation
   --compact                     use compact lstm builder
-  --models-to-save              amount of models to save during training [default: 10]
+  --models-to-save=SAVE         amount of models to save during training [default: 10]
 """
 
 import numpy as np
@@ -61,17 +61,12 @@ import dynet as dn
 from docopt import docopt
 from collections import defaultdict
 import matplotlib
+import BiLSTMEncoder
 
 # to run on headless server
 matplotlib.use('Agg')
 # noinspection PyPep8
 from matplotlib import pyplot as plt
-
-# consts
-UNK = 'UNK'
-BEGIN_SEQ = '<s>'
-END_SEQ = '</s>'
-PAD = 'PAD'
 
 # add masking for the input (zero-out attention weights) - done
 # save k models every checkpoint and not only if best model
@@ -107,18 +102,18 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         prepare_data.load_parallel_data(test_inputs_path, test_outputs_path, vocab_size, 999)
 
     # add unk symbols to vocabularies
-    input_vocabulary.append(UNK)
-    output_vocabulary.append(UNK)
+    input_vocabulary.append(common.UNK)
+    output_vocabulary.append(common.UNK)
 
     # add pad symbols to vocabularies
-    input_vocabulary.append(PAD)
-    output_vocabulary.append(PAD)
+    input_vocabulary.append(common.PAD)
+    output_vocabulary.append(common.PAD)
 
     # add begin/end sequence symbols to vocabularies
-    input_vocabulary.append(BEGIN_SEQ)
-    input_vocabulary.append(END_SEQ)
-    output_vocabulary.append(BEGIN_SEQ)
-    output_vocabulary.append(END_SEQ)
+    input_vocabulary.append(common.BEGIN_SEQ)
+    input_vocabulary.append(common.END_SEQ)
+    output_vocabulary.append(common.BEGIN_SEQ)
+    output_vocabulary.append(common.END_SEQ)
 
     # symbol 2 int and int 2 symbol
     x2int = dict(zip(input_vocabulary, range(0, len(input_vocabulary))))
@@ -139,11 +134,15 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         print 'could not find existing model or explicit override was requested. started training from scratch...'
         model, params = build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, layers)
 
+    # initialize the encoder object
+    encoder = BiLSTMEncoder.BiLSTMEncoder(x2int, params)
+
     # train the model
     if not eval_only:
-        model, params, last_epoch, best_epoch = train_model(model, params, train_inputs, train_outputs, dev_inputs,
-                                                            dev_outputs, x2int, y2int, int2y, epochs, optimization,
-                                                            results_file_path, plot, batch_size, eval_after)
+        model, params, last_epoch, best_epoch = train_model(model, encoder, params, train_inputs, train_outputs,
+                                                            dev_inputs, dev_outputs, y2int, int2y, epochs,
+                                                            optimization, results_file_path, plot, batch_size,
+                                                            eval_after)
         print 'last epoch is {}'.format(last_epoch)
         print 'best epoch is {}'.format(best_epoch)
         print 'finished training'
@@ -158,7 +157,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
                                                              test_inputs, test_outputs)
     else:
         # predict test set using a single model
-        predicted_sequences = predict_multiple_sequences(params, x2int, y2int, int2y, test_inputs)
+        predicted_sequences = predict_multiple_sequences(params, encoder, y2int, int2y, test_inputs)
     if len(predicted_sequences) > 0:
 
         # evaluate the test predictions
@@ -194,7 +193,8 @@ def predict_with_ensemble_majority(input_vocabulary, output_vocabulary, x2int, y
     ensemble_predictions = []
     for em in ensemble_models:
         model, params = em
-        predicted_sequences = predict_multiple_sequences(params, x2int, y2int, int2y, test_inputs)
+        encoder = BiLSTMEncoder.BiLSTMEncoder(x2int, params)
+        predicted_sequences = predict_multiple_sequences(params, encoder, y2int, int2y, test_inputs)
         ensemble_predictions.append(predicted_sequences)
 
     # perform voting for each test input
@@ -227,7 +227,7 @@ def save_best_model(model, model_file_path):
     print 'saved to {0}'.format(tmp_model_path)
 
 
-def save_model(model, model_file_path, updates, models_to_save = None):
+def save_model(model, model_file_path, updates, models_to_save=None):
     tmp_model_path = model_file_path + '_{}.txt'.format(updates)
     print 'saving to ' + tmp_model_path
     model.save(tmp_model_path)
@@ -301,8 +301,8 @@ def build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, laye
     return model, params
 
 
-def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outputs, x2int, y2int, int2y, epochs,
-                optimization, results_file_path, plot, batch_size, eval_after):
+def train_model(model, encoder, params, train_inputs, train_outputs, dev_inputs, dev_outputs, y2int, int2y,
+                epochs, optimization, results_file_path, plot, batch_size, eval_after):
     print 'training...'
 
     np.random.seed(17)
@@ -388,7 +388,7 @@ def train_model(model, params, train_inputs, train_outputs, dev_inputs, dev_outp
             # debug prints for batch seq lengths
             # print 'batch {} seq lens'.format(i)
             # print [len(s) for s in batch_inputs]
-            loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
+            loss = compute_batch_loss(params, encoder, batch_inputs, batch_outputs, y2int)
 
             # forward pass
             total_loss += loss.scalar_value()
@@ -438,11 +438,11 @@ loss per example: {}'.format(e,
             if total_batches % eval_after == 0:
 
                 print 'starting checkpoint evaluation'
-                dev_bleu, dev_loss = checkpoint_eval(params, dev_batch_size, dev_data, dev_inputs, dev_len, dev_order,
-                                                     dev_outputs, int2y, x2int, y2int)
+                dev_bleu, dev_loss = checkpoint_eval(encoder, params, dev_batch_size, dev_data, dev_inputs, dev_len,
+                                                     dev_order, dev_outputs, int2y, y2int)
 
                 log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
-                save_model(model, results_file_path, total_batches, models_to_save = int(arguments['--models-to-save']))
+                save_model(model, results_file_path, total_batches, models_to_save=int(arguments['--models-to-save']))
                 if dev_bleu >= best_dev_bleu:
                     best_dev_bleu = dev_bleu
                     best_dev_epoch = e
@@ -509,12 +509,13 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
     return model, params, e, best_train_epoch
 
 
-def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs, int2y, x2int, y2int):
+def checkpoint_eval(encoder, params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs, int2y,
+                    y2int):
 
     # TODO: could be more efficient - now "encoding" (lookup) the dev set twice (for predictions and loss)
     print 'predicting on dev...'
     # get dev predictions
-    dev_predictions = predict_multiple_sequences(params, x2int, y2int, int2y, dev_inputs)
+    dev_predictions = predict_multiple_sequences(params, encoder, y2int, int2y, dev_inputs)
     print 'calculating dev bleu...'
     # get dev accuracy
     dev_bleu = evaluate_model(dev_predictions, dev_inputs, dev_outputs, print_results=True)[1]
@@ -536,7 +537,7 @@ def checkpoint_eval(params, batch_size, dev_data, dev_inputs, dev_len, dev_order
         # print 'dev batch {}'.format(i)
         # print 'batch sent len {}'.format(len(batch_inputs[0]))
 
-        loss = compute_batch_loss(params, batch_inputs, batch_outputs, x2int, y2int)
+        loss = compute_batch_loss(params, encoder, batch_inputs, batch_outputs, y2int)
         total_dev_loss += loss.value()
 
         if i % 10 == 0 and i > 0:
@@ -560,7 +561,7 @@ def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, train_acc
                                                         dev_accuracy))
 
 
-def compute_batch_loss(params, batch_input_seqs, batch_output_seqs, x2int, y2int):
+def compute_batch_loss(params, encoder, batch_input_seqs, batch_output_seqs, y2int):
     # renew computation graph per batch
     dn.renew_cg()
 
@@ -577,24 +578,23 @@ def compute_batch_loss(params, batch_input_seqs, batch_output_seqs, x2int, y2int
     # encode batch with bilstm encoder: each element represents one step in time, and is a matrix of 2*h x batch size
     # for example, for sentence length of 12, blstm_outputs wil be: 12 x 2 x 100 x 16
     # note: also adding begin_seq, end_seq symbols here!
-    blstm_outputs, input_masks = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'],
-                                                     params['encoder_rrnn'], batch_input_seqs)
+    blstm_outputs, input_masks = encoder.encode_batch(batch_input_seqs)
 
     # initialize the decoder rnn
     s_0 = params['decoder_rnn'].initial_state()
     s = s_0
 
     # concatenate the end seq symbols to the output sequence
-    padded_batch_output_seqs = [seq + [END_SEQ] for seq in batch_output_seqs]
+    padded_batch_output_seqs = [seq + [common.END_SEQ] for seq in batch_output_seqs]
 
     # get output word ids for each step of the decoder
-    output_word_ids, output_masks, output_tot = get_batch_word_ids(padded_batch_output_seqs, y2int)
+    output_word_ids, output_masks, output_tot = common.get_batch_word_ids(padded_batch_output_seqs, y2int)
 
     # initial "input feeding" vectors to feed decoder - 3*h
     init_input_feeding = dn.lookup_batch(params['init_lookup'], [0] * batch_size)
 
     # initial feedback embeddings for the decoder, use begin seq symbol embedding
-    init_feedback = dn.lookup_batch(params['output_lookup'], [y2int[BEGIN_SEQ]] * batch_size)
+    init_feedback = dn.lookup_batch(params['output_lookup'], [y2int[common.BEGIN_SEQ]] * batch_size)
 
     # init decoder
     decoder_init = dn.concatenate([init_feedback, init_input_feeding])
@@ -640,79 +640,7 @@ def compute_batch_loss(params, batch_input_seqs, batch_output_seqs, x2int, y2int
     return total_batch_loss
 
 
-# get list of word ids for each timestep in the batch, do padding and masking. If batch size is 1 return None as masks
-def get_batch_word_ids(batch_seqs, x2int):
-    net_len = 0
-    masks = []
-    batch_word_ids = []
-
-    # need to maintain longest seq len since *output* seqs are not sorted by length
-    max_seq_len = len(batch_seqs[0])
-    for seq in batch_seqs:
-        if len(seq) > max_seq_len:
-            max_seq_len = len(seq)
-
-    for i in range(max_seq_len):
-        if len(batch_seqs) > 1:
-            # masking
-            mask = [(1 if len(seq) > i else 0) for seq in batch_seqs]
-            masks.append(mask)
-            net_len += sum(mask)
-        else:
-            # no masking
-            masks = None
-            net_len = len(batch_seqs[0])
-        batch_word_ids.append([])
-
-        # get word ids
-        for seq in batch_seqs:
-            # pad short seqs
-            if i > len(seq) - 1:
-                batch_word_ids[i].append(x2int[PAD])
-            else:
-                if seq[i] in x2int:
-                    batch_word_ids[i].append(x2int[seq[i]])
-                else:
-                    batch_word_ids[i].append(x2int[UNK])
-
-    return batch_word_ids, masks, net_len
-
-
-# bilstm encode batch, each element in the result is a matrix of 2*h x batch size elements
-def batch_bilstm_encode(x2int, input_lookup, encoder_frnn, encoder_rrnn, input_seq_batch):
-    f_outputs = []
-    r_outputs = []
-    final_outputs = []
-
-    to_encode = [[BEGIN_SEQ] + s + [END_SEQ] for s in input_seq_batch]
-
-    # get the word ids for each step, after padding
-    word_ids, masks, tot_chars = get_batch_word_ids(to_encode, x2int)
-
-    # init rnns
-    f_state = encoder_frnn.initial_state()
-    r_state = encoder_rrnn.initial_state()
-
-    # max seq len after padding (assuming first sentence is longest since sorting by length in train_model())
-    max_seq_len = len(to_encode[0])
-
-    # iterate in both directions
-    for i in xrange(max_seq_len):
-        f_state = f_state.add_input(dn.lookup_batch(input_lookup, word_ids[i]))
-        f_outputs.append(f_state.output())
-
-        r_state = r_state.add_input(dn.lookup_batch(input_lookup, word_ids[max_seq_len - i - 1]))
-        r_outputs.append(r_state.output())
-
-    # concatenate forward and backward representations for each step
-    for i in xrange(max_seq_len):
-        concatenated = dn.concatenate([f_outputs[i], r_outputs[max_seq_len - i - 1]])
-        final_outputs.append(concatenated)
-
-    return final_outputs, masks
-
-
-def predict_greedy(params, input_seq, x2int, y2int, int2y):
+def predict_greedy(params, encoder, input_seq, y2int, int2y):
     dn.renew_cg()
     alphas_mtx = []
 
@@ -728,15 +656,14 @@ def predict_greedy(params, input_seq, x2int, y2int, int2y):
     w_a = dn.parameter(params['w_a'])
 
     # encode input sequence
-    blstm_outputs, input_masks = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'], params['encoder_rrnn'],
-                                        [input_seq])
+    blstm_outputs, input_masks = encoder.encode_batch([input_seq])
 
     # initialize the decoder rnn
     s_0 = params['decoder_rnn'].initial_state()
     s = s_0
 
     # set prev_output_vec for first lstm step as BEGIN_WORD concatenated with special padding vector
-    prev_output_vec = dn.concatenate([params['output_lookup'][y2int[BEGIN_SEQ]], params['init_lookup'][0]])
+    prev_output_vec = dn.concatenate([params['output_lookup'][y2int[common.BEGIN_SEQ]], params['init_lookup'][0]])
     predicted_sequence = []
     i = 0
 
@@ -764,7 +691,7 @@ def predict_greedy(params, input_seq, x2int, y2int, int2y):
         predicted_sequence.append(int2y[next_element_index])
 
         # check if reached end of word
-        if predicted_sequence[-1] == END_SEQ:
+        if predicted_sequence[-1] == common.END_SEQ:
             break
 
         # prepare for the next iteration - "feedback"
@@ -775,7 +702,7 @@ def predict_greedy(params, input_seq, x2int, y2int, int2y):
     return predicted_sequence[0:-1], alphas_mtx
 
 
-def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
+def predict_beamsearch(params, encoder, input_seq, y2int, int2y):
     if len(input_seq) == 0:
         return []
 
@@ -791,8 +718,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
     w_a = dn.parameter(params['w_a'])
 
     # encode input sequence
-    blstm_outputs, input_masks = batch_bilstm_encode(x2int, params['input_lookup'], params['encoder_frnn'],
-                                                     params['encoder_rrnn'], [input_seq])
+    blstm_outputs, input_masks = encoder.encode_batch([input_seq])
 
     # complete sequences and their probabilities
     final_states = []
@@ -801,7 +727,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
     s_0 = params['decoder_rnn'].initial_state()
 
     # holds beam step index mapped to (sequence, probability, decoder state, attn_vector) tuples
-    beam = {-1: [([BEGIN_SEQ], 1.0, s_0, params['init_lookup'][0])]}
+    beam = {-1: [([common.BEGIN_SEQ], 1.0, s_0, params['init_lookup'][0])]}
     i = 0
 
     # expand another step if didn't reach max length and there's still beams to expand
@@ -814,7 +740,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
             last_hypo_symbol = prefix_seq[-1]
 
             # cant expand finished sequences
-            if last_hypo_symbol == END_SEQ:
+            if last_hypo_symbol == common.END_SEQ:
                 continue
 
             # expand from the last symbol of the hypothesis
@@ -851,7 +777,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
                 p = probs_val[index]
                 new_seq = prefix_seq + [int2y[index]]
                 new_prob = prefix_prob * p
-                if new_seq[-1] == END_SEQ or i == max_prediction_len - 1:
+                if new_seq[-1] == common.END_SEQ or i == max_prediction_len - 1:
                     # TODO: add to final states only if fits in k best?
                     # if found a complete sequence or max length - add to final states
                     final_states.append((new_seq[1:-1], new_prob))
@@ -873,7 +799,7 @@ def predict_beamsearch(params, input_seq, x2int, y2int, int2y):
 
 
 # Luong et. al 2015 attention mechanism:
-def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
+def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks=None):
     # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
     if arguments['--last-state']:
         blstm_outputs = [blstm_outputs[-1]]
@@ -883,7 +809,6 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     # scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
     w_a_h_t = w_a * h_t
     scores = [v_a * dn.tanh(dn.affine_transform([w_a_h_t, u_a, h_input])) for h_input in blstm_outputs]
-
 
     concatenated = dn.concatenate(scores)
     if input_masks:
@@ -914,18 +839,17 @@ def attend(blstm_outputs, h_t, w_c, v_a, w_a, u_a, input_masks = None):
     return h_output, alphas
 
 
-def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
+def predict_multiple_sequences(params, encoder, y2int, int2y, inputs):
     print 'predicting...'
     predictions = {}
     data_len = len(inputs)
     for i, input_seq in enumerate(inputs):
         if i == 0 and plot_param:
-            plot_attn_weights(params, input_seq, x2int, y2int, int2y,
-                              filename='{}_{}.png'.format(
-                                  results_file_path_param, int(time.time())))
+            plot_attn_weights(params, encoder, input_seq, y2int, int2y, filename='{}_{}.png'.format(
+                              results_file_path_param, int(time.time())))
         if beam_param > 1:
             # take 1-best result
-            nbest, alphas_mtx = predict_beamsearch(params, input_seq, x2int, y2int, int2y)
+            nbest, alphas_mtx = predict_beamsearch(params, encoder, input_seq, y2int, int2y)
 
             # best hypothesis, sequence without probability
             predicted_seq = nbest[0][0]
@@ -936,7 +860,7 @@ def predict_multiple_sequences(params, x2int, y2int, int2y, inputs):
             for k, seq in enumerate(nbest):
                 print '{}-best: {}'.format(k, ' '.join(seq[0]).encode('utf8') + '\n')
         else:
-            predicted_seq, alphas_mtx = predict_greedy(params, input_seq, x2int, y2int, int2y)
+            predicted_seq, alphas_mtx = predict_greedy(params, encoder, input_seq, y2int, int2y)
         if i % 100 == 0 and i > 0:
             print 'predicted {} examples out of {}'.format(i, data_len)
 
@@ -980,9 +904,9 @@ def evaluate_model(predicted_sequences, inputs, outputs, print_results=False):
     return len(predicted_sequences), bleu
 
 
-def plot_attn_weights(params, input_seq, x2int, y2int, int2y, filename=None):
+def plot_attn_weights(params, encoder, input_seq, y2int, int2y, filename=None):
     # predict
-    output_seq, alphas_mtx = predict_greedy(params, input_seq, x2int, y2int, int2y)
+    output_seq, alphas_mtx = predict_greedy(params, encoder, input_seq, y2int, int2y)
     fig, ax = plt.subplots()
 
     image = np.array(alphas_mtx)
