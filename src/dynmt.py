@@ -7,8 +7,8 @@ Usage:
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED] [--compact]
-  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] [--models-to-save=SAVE] TRAIN_INPUTS_PATH TRAIN_OUTPUTS_PATH
-  DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
+  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] [--models-to-save=SAVE] [--max] TRAIN_INPUTS_PATH
+  TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
   TRAIN_INPUTS_PATH    train inputs path
@@ -47,6 +47,7 @@ Options:
   --eval                        skip training, do only evaluation
   --compact                     use compact lstm builder
   --models-to-save=SAVE         amount of models to save during training [default: 10]
+  --max                         use MaxPooling encoder
 """
 
 import numpy as np
@@ -63,6 +64,7 @@ from collections import defaultdict
 import matplotlib
 import BiLSTMEncoder
 import AttentionBasedDecoder
+import MaxPoolEncoder
 
 # to run on headless server
 matplotlib.use('Agg')
@@ -70,14 +72,14 @@ matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 
 # add masking for the input (zero-out attention weights) - done
-# save k models every checkpoint and not only if best model
+# save k models every checkpoint and not only if best model - done
+# OOP refactoring for encoder/decoder - done
+# TODO: write saved checkpoint metadata to file: epoch, update, best score, best perplexity...
 # TODO: measure sentences per second while *decoding*
-# TODO: write training metadata to file: epoch, update, best score, best perplexity...
 # TODO: add ensembling support by interpolating probabilities
-# TODO: OOP refactoring
 # TODO: debug with non-english output (i.e. reverse translation from en to he)
 # TODO: print n-best lists to file
-# TODO: rename model parameters the same way they are named in a specific paper
+# TODO: carefully rename model parameters the same way they are named in a specific paper
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
@@ -136,7 +138,14 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         model, params = build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, layers)
 
     # initialize the encoder object
-    encoder = BiLSTMEncoder.BiLSTMEncoder(x2int, params)
+
+    if arguments['--max']:
+        encoder = MaxPoolEncoder.MaxPoolEncoder(x2int, params)
+        print 'using MaxPoolEncoder...'
+    else:
+        encoder = BiLSTMEncoder.BiLSTMEncoder(x2int, params)
+        print 'using BiLSTMEncoder...'
+
     decoder = AttentionBasedDecoder.AttentionBasedDecoder(y2int, int2y, params, max_prediction_len, plot_param,
                                                           beam_param)
 
@@ -175,8 +184,6 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
 
         # write output files
         common.write_results_files(results_file_path, final_results)
-
-        # bleu = common.evaluate_bleu_from_files(test_outputs_path, predictions_path)
 
     return
 
@@ -258,6 +265,8 @@ def load_best_model(input_vocabulary, output_vocabulary, results_file_path, inpu
 
 
 def build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, layers):
+    # define all model parameters
+    # TODO: add logic for "smart" parameter allocation according to the user's chosen architecture
     print 'creating model...'
 
     model = dn.ParameterCollection()
