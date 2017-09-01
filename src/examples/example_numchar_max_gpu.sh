@@ -14,7 +14,7 @@ python ../dynmt.py \
 --epochs=100 \
 --lstm-layers=1 \
 --optimization=ADADELTA \
---batch-size=1 \
+--batch-size=16 \
 --beam-size=1 \
 --plot \
 --max \
