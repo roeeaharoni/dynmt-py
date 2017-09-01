@@ -13,16 +13,16 @@ class MaxPoolEncoder:
 
         # one mask per step, all are [1]'s since only one state from max pool encoder
         max_masks = [[1] * len(input_seq_batch)]
-        print 'len masks'
-        print len(masks)
-        print 'masks'
-        print masks
-        print 'len max_masks'
-        print len(max_masks)
-        print 'max_masks'
-        print max_masks
-        print 'encoded_inputs[0].dim'
-        print encoded_inputs[0].dim()
-        print 'max_output.dim'
-        print max_output.dim()
+        # print 'len masks'
+        # print len(masks)
+        # print 'masks'
+        # print masks
+        # print 'len max_masks'
+        # print len(max_masks)
+        # print 'max_masks'
+        # print max_masks
+        # print 'encoded_inputs[0].dim'
+        # print encoded_inputs[0].dim()
+        # print 'max_output.dim'
+        # print max_output.dim()
         return [max_output], max_masks
