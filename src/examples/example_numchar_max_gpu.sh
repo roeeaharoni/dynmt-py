@@ -10,7 +10,7 @@ python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --dynet-mem 1000 \
 --dynet-devices GPU:0 \
 --input-dim=100 \
---hidden-dim=100 \
+--hidden-dim=200 \
 --epochs=100 \
 --lstm-layers=1 \
 --optimization=ADADELTA \
