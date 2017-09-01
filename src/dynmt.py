@@ -252,11 +252,10 @@ def save_model(model, model_file_path, updates, models_to_save=None):
     print 'saved to {0}'.format(tmp_model_path)
 
     if models_to_save:
-        search_dir = '/'.join(model_file_path)
-        files = filter(os.path.isfile, glob.glob(search_dir + '*[0-9].*'))
+        files = filter(os.path.isfile, glob.glob(model_file_path + '*[0-9].*txt'))
         files.sort(key=lambda x: os.path.getmtime(x))
         if len(files) > models_to_save:
-            print 'removing {}'.format(files[-1])
+            print 'removing {}'.format(files[0])
             os.remove(files[-1])
 
 
@@ -354,36 +353,37 @@ def train_model(model, encoder, decoder, params, train_inputs, train_outputs, de
 
     trainer.set_clip_threshold(float(arguments['--grad-clip']))
     seen_examples_count = 0
-    best_avg_train_loss = 99999999
     total_loss = 0
-    best_dev_loss = 99999999
-    best_dev_bleu = -1
-    best_train_bleu = -1
     best_dev_epoch = 0
     best_train_epoch = 0
     patience = 0
     train_len = len(train_outputs)
     dev_len = len(dev_inputs)
-    train_bleu = -1
-    checkpoints_x = []
-    train_loss_y = []
-    dev_loss_y = []
-    train_bleu_y = []
-    dev_bleu_y = []
     avg_train_loss = -1
-    total_batches = 0
     train_loss_patience = 0
     train_loss_patience_threshold = 99999999
     max_patience = int(arguments['--max-patience'])
-    e = 0
     log_path = results_file_path + '_log.txt'
+
+    start_epoch, checkpoints_x, train_loss_y, dev_loss_y, dev_accuracy_y = read_from_log(log_path)
+
+    if len(train_loss_y) > 0:
+        total_batches = checkpoints_x[-1]
+        best_avg_train_loss = max(train_loss_y)
+        best_dev_accuracy = max(dev_accuracy_y)
+        best_dev_loss = max(dev_loss_y)
+    else:
+        total_batches = 0
+        best_avg_train_loss = 999999
+        best_dev_loss = 999999
+        best_dev_accuracy = 0
 
     # progress bar init
     # noinspection PyArgumentList
     widgets = [progressbar.Bar('>'), ' ', progressbar.ETA()]
     train_progress_bar = progressbar.ProgressBar(widgets=widgets, maxval=epochs).start()
 
-    for e in xrange(epochs):
+    for e in xrange(start_epoch, epochs):
 
         # shuffle the batch start indices in each epoch
         random.shuffle(train_order)
@@ -432,10 +432,6 @@ def train_model(model, encoder, decoder, params, train_inputs, train_outputs, de
                     print 'train loss patience exceeded: {}'.format(train_loss_patience)
                     return model, params, e, best_train_epoch
 
-            # print 'best_avg_train ' + str(best_avg_train_loss)
-            # print 'avg_train ' + str(avg_train_loss)
-            # print 'train loss patience {}'.format(train_loss_patience)
-
             if i % 500 == 0 and i > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg \
 loss per example: {}'.format(e,
@@ -461,10 +457,10 @@ loss per example: {}'.format(e,
                 dev_bleu, dev_loss = checkpoint_eval(encoder, decoder, params, dev_batch_size, dev_data, dev_inputs,
                                                      dev_len, dev_order, dev_outputs, int2y, y2int)
 
-                log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, train_bleu, dev_bleu)
+                log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, dev_bleu)
                 save_model(model, results_file_path, total_batches, models_to_save=int(arguments['--models-to-save']))
-                if dev_bleu >= best_dev_bleu:
-                    best_dev_bleu = dev_bleu
+                if dev_bleu >= best_dev_accuracy:
+                    best_dev_accuracy = dev_bleu
                     best_dev_epoch = e
 
                     # save best model to disk
@@ -477,18 +473,15 @@ loss per example: {}'.format(e,
                 if dev_loss < best_dev_loss:
                     best_dev_loss = dev_loss
 
-                print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} train bleu = {4:.4f} \
-best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience = {7}'.format(
+                print 'epoch: {0} train loss: {1:.4f} dev loss: {2:.4f} dev bleu: {3:.4f} \
+best dev bleu {4:.4f} (epoch {5}) patience = {6}'.format(
                     e,
                     avg_train_loss,
                     dev_loss,
                     dev_bleu,
-                    train_bleu,
-                    best_dev_bleu,
-                    best_train_bleu,
-                    patience,
+                    best_dev_accuracy,
                     best_dev_epoch,
-                    best_train_epoch)
+                    patience)
 
                 if patience == max_patience:
                     print 'out of patience after {0} checkpoints'.format(str(e))
@@ -502,10 +495,10 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
                 if plot:
                     train_loss_y.append(avg_train_loss)
                     checkpoints_x.append(total_batches)
-                    dev_bleu_y.append(dev_bleu)
+                    dev_accuracy_y.append(dev_bleu)
                     dev_loss_y.append(dev_loss)
 
-                    y_vals = [('train_loss', train_loss_y), ('dev loss', dev_loss_y), ('dev_bleu', dev_bleu_y)]
+                    y_vals = [('train_loss', train_loss_y), ('dev loss', dev_loss_y), ('dev_bleu', dev_accuracy_y)]
                     common.plot_to_file(y_vals, x_name='total batches', x_vals=checkpoints_x,
                                         file_path=results_file_path + '_learning_curve.png')
 
@@ -566,16 +559,52 @@ def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, 
     return dev_bleu, avg_dev_loss
 
 
-def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, train_accuracy, dev_accuracy):
+def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, dev_accuracy):
 
     # if first log, add headers
-
-    if epoch == 0:
-        log_to_file(file_name, 'epoch', 'update', 'avg_train_loss', 'avg_dev_loss', 'train_accuracy', 'dev_accuracy')
+    if not os.path.isfile(file_name):
+        with open(file_name, "w") as logfile:
+            logfile.write("{}\t{}\t{}\t{}\t{}\n".format(
+                'epoch', 'update', 'avg_train_loss', 'avg_dev_loss', 'dev_accuracy'))
 
     with open(file_name, "a") as logfile:
-        logfile.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(epoch, total_updates, train_loss, dev_loss, train_accuracy,
+        logfile.write("{}\t{}\t{}\t{}\t{}\n".format(epoch, total_updates, train_loss, dev_loss,
                                                         dev_accuracy))
+
+
+def read_from_log(log_path):
+    last_epoch = 0
+    checkpoints_x = []
+    train_loss_y = []
+    dev_loss_y = []
+    dev_accuracy_y = []
+    if os.path.isfile(log_path):
+        with open(log_path, "r") as logfile:
+            line = logfile.readline()
+            while line:
+                splitted = line.split('\t')
+                if not splitted[0].isdigit():
+                    line = logfile.readline()
+                    continue
+                last_epoch = int(splitted[0])
+                update = int(splitted[1])
+                avg_train_loss = float(splitted[2])
+                avg_dev_loss = float(splitted[3])
+                if len(splitted) == 6:
+                    # backwards compatibillity
+                    dev_accuracy = float(splitted[5].strip())
+                else:
+                    dev_accuracy = float(splitted[4].strip())
+
+                checkpoints_x.append(update)
+                train_loss_y.append(avg_train_loss)
+                dev_loss_y.append(avg_dev_loss)
+                dev_accuracy_y.append(dev_accuracy)
+
+                # read next line
+                line = logfile.readline()
+
+    return last_epoch, checkpoints_x, train_loss_y, dev_loss_y, dev_accuracy_y
 
 
 def compute_batch_loss(encoder, decoder, batch_input_seqs, batch_output_seqs, y2int):
