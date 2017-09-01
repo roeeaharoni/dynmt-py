@@ -18,13 +18,13 @@ python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --beam-size=1 \
 --plot \
 --max \
-/Users/roeeaharoni/git/dynet-seq2seq-attn/data/input.txt \
-/Users/roeeaharoni/git/dynet-seq2seq-attn/data/output.txt \
-/Users/roeeaharoni/git/dynet-seq2seq-attn/data/input.txt \
-/Users/roeeaharoni/git/dynet-seq2seq-attn/data/output.txt \
-/Users/roeeaharoni/git/dynet-seq2seq-attn/data/input.txt \
-/Users/roeeaharoni/git/dynet-seq2seq-attn/data/output.txt \
-/Users/roeeaharoni/git/dynet-seq2seq-attn/results/test_numchar_max_gpu
+$base_path/git/dynet-seq2seq-attn/data/input.txt \
+$base_path/git/dynet-seq2seq-attn/data/output.txt \
+$base_path/git/dynet-seq2seq-attn/data/input.txt \
+$base_path/git/dynet-seq2seq-attn/data/output.txt \
+$base_path/git/dynet-seq2seq-attn/data/input.txt \
+$base_path/git/dynet-seq2seq-attn/data/output.txt \
+$base_path/git/dynet-seq2seq-attn/results/test_numchar_max_gpu
 
 # test files
 #$base_path/git/research/nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.clean.true.bpe.de \
