@@ -6,7 +6,7 @@ base_path=/home/nlp/aharonr6
 
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
-python ../dynmt.py \
+python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --dynet-mem 1000 \
 --dynet-devices GPU:0 \
 --input-dim=100 \
