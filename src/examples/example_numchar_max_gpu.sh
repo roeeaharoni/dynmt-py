@@ -24,7 +24,7 @@ $base_path/git/dynet-seq2seq-attn/data/input.txt \
 $base_path/git/dynet-seq2seq-attn/data/output.txt \
 $base_path/git/dynet-seq2seq-attn/data/input.txt \
 $base_path/git/dynet-seq2seq-attn/data/output.txt \
-$base_path/git/dynet-seq2seq-attn/results/test_numchar_max_gpu
+$base_path/git/dynet-seq2seq-attn/results/test_numchar_max_gpu_200
 
 # test files
 #$base_path/git/research/nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.clean.true.bpe.de \
