@@ -11,4 +11,12 @@ class MaxPoolEncoder:
         encoded_inputs, masks = self.bilstm.encode_batch(input_seq_batch)
         max_output = dn.emax(encoded_inputs)
         max_masks = [[1]] * len(input_seq_batch)
+        print 'masks'
+        print masks
+        print 'max_masks'
+        print max_masks
+        print 'encoded_inputs[0].dim'
+        print encoded_inputs[0].dim
+        print 'max_output.dim'
+        print max_output.dim
         return [max_output], max_masks

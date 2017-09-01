@@ -74,6 +74,7 @@ from matplotlib import pyplot as plt
 # add masking for the input (zero-out attention weights) - done
 # save k models every checkpoint and not only if best model - done
 # OOP refactoring for encoder/decoder - done
+# TODO: continue logging from last saved checkpoint values
 # TODO: write saved checkpoint metadata to file: epoch, update, best score, best perplexity...
 # TODO: measure sentences per second while *decoding*
 # TODO: add ensembling support by interpolating probabilities
