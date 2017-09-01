@@ -12,7 +12,7 @@ class MaxPoolEncoder:
         max_output = dn.emax(encoded_inputs)
 
         # one mask per step, all are [1]'s since only one state from max pool encoder
-        max_masks = [[1]] * (len(input_seq_batch[0]) + 2)
+        max_masks = [[1] * len(input_seq_batch)]
         print 'len masks'
         print len(masks)
         print 'masks'
