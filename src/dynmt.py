@@ -495,8 +495,14 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
 
                 # plotting results from checkpoint evaluation
                 if plot:
-                    plot_to_file(avg_train_loss, checkpoints_x, dev_bleu, dev_bleu_y, dev_loss, dev_loss_y,
-                                 results_file_path, total_batches, train_bleu, train_bleu_y, train_loss_y)
+                    train_loss_y.append(avg_train_loss)
+                    checkpoints_x.append(total_batches)
+                    dev_bleu_y.append(dev_bleu)
+                    dev_loss_y.append(dev_loss)
+
+                    y_vals = [('train_loss', train_loss_y), ('dev loss', dev_loss_y), ('dev_bleu', dev_bleu_y)]
+                    common.plot_to_file(y_vals, x_name='total batches', x_vals=checkpoints_x,
+                                        file_path=results_file_path + '_learning_curve.png')
 
         # update progress bar after completing epoch
         train_progress_bar.update(e)
@@ -512,22 +518,6 @@ best dev bleu {5:.4f} (epoch {8}) best train bleu: {6:.4f} (epoch {9}) patience 
         best_train_epoch)
 
     return model, params, e, best_train_epoch
-
-
-def plot_to_file(avg_train_loss, checkpoints_x, dev_bleu, dev_bleu_y, dev_loss, dev_loss_y, results_file_path,
-                 total_batches, train_bleu, train_bleu_y, train_loss_y):
-    checkpoints_x.append(total_batches)
-    train_bleu_y.append(train_bleu)
-    train_loss_y.append(avg_train_loss)
-    dev_loss_y.append(dev_loss)
-    dev_bleu_y.append(dev_bleu)
-    with plt.style.context('fivethirtyeight'):
-        p1, = plt.plot(checkpoints_x, dev_loss_y, label='dev loss')
-        p2, = plt.plot(checkpoints_x, train_loss_y, label='train loss')
-        p3, = plt.plot(checkpoints_x, dev_bleu_y, label='dev acc.')
-        p4, = plt.plot(checkpoints_x, train_bleu_y, label='train acc.')
-        plt.legend(loc='upper left', handles=[p1, p2, p3, p4])
-    plt.savefig(results_file_path + 'plot.png')
 
 
 def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs, int2y,
@@ -574,6 +564,7 @@ def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, 
 def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, train_accuracy, dev_accuracy):
 
     # if first log, add headers
+
     if epoch == 0:
         log_to_file(file_name, 'epoch', 'update', 'avg_train_loss', 'avg_dev_loss', 'train_accuracy', 'dev_accuracy')
 

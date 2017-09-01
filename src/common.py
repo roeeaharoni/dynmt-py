@@ -2,6 +2,11 @@ import os
 import codecs
 import re
 import numpy as np
+import matplotlib
+# to run on headless server
+matplotlib.use('Agg')
+# noinspection PyPep8
+from matplotlib import pyplot as plt
 
 
 # consts
@@ -125,3 +130,14 @@ def get_batch_word_ids(batch_seqs, x2int):
                     batch_word_ids[i].append(x2int[UNK])
 
     return batch_word_ids, masks, net_len
+
+
+def plot_to_file(y_vals, x_name, x_vals, file_path):
+
+    plots = []
+    with plt.style.context('fivethirtyeight'):
+        for (name, vals) in y_vals:
+            p, = plt.plot(x_vals, vals, label=name)
+            plots.append(p)
+        plt.legend(loc='upper left', handles=plots)
+    plt.savefig(file_path)
