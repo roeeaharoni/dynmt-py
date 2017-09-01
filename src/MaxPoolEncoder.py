@@ -10,7 +10,9 @@ class MaxPoolEncoder:
         # TODO: test with batching
         encoded_inputs, masks = self.bilstm.encode_batch(input_seq_batch)
         max_output = dn.emax(encoded_inputs)
-        max_masks = [[1]] * len(input_seq_batch)
+
+        # one mask per step, all are [1]'s since only one state from max pool encoder
+        max_masks = [[1]] * len(input_seq_batch[0])
         print 'len masks'
         print len(masks)
         print 'masks'
