@@ -65,6 +65,7 @@ import matplotlib
 import BiLSTMEncoder
 import AttentionBasedDecoder
 import MaxPoolEncoder
+import LastBiLSTMStateEncoder
 
 # to run on headless server
 matplotlib.use('Agg')
@@ -139,11 +140,14 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         model, params = build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, layers)
 
     # initialize the encoder object
-
+    encoder = None
     if arguments['--max']:
         encoder = MaxPoolEncoder.MaxPoolEncoder(x2int, params)
         print 'using MaxPoolEncoder...'
-    else:
+    if arguments['--last-state']:
+        encoder = LastBiLSTMStateEncoder.LastBiLSTMStateEncoder(x2int, params)
+        print 'using LastStateEncoder...'
+    if not encoder:
         encoder = BiLSTMEncoder.BiLSTMEncoder(x2int, params)
         print 'using BiLSTMEncoder...'
 
