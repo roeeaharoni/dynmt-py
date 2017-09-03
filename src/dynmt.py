@@ -432,7 +432,7 @@ def train_model(model, encoder, decoder, params, train_inputs, train_outputs, de
                     print 'train loss patience exceeded: {}'.format(train_loss_patience)
                     return model, params, e, best_train_epoch
 
-            if total_batches % 1000 == 0 and total_batches > 0:
+            if total_batches % 100 == 0 and total_batches > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg \
 loss per example: {}'.format(e,
                              i,
