@@ -75,8 +75,8 @@ from matplotlib import pyplot as plt
 # add masking for the input (zero-out attention weights) - done
 # save k models every checkpoint and not only if best model - done
 # OOP refactoring for encoder/decoder - done
-# TODO: continue logging from last saved checkpoint values
-# TODO: write saved checkpoint metadata to file: epoch, update, best score, best perplexity...
+# continue logging from last saved checkpoint values - done
+# write saved checkpoint metadata to file: epoch, update, best score, best perplexity - taking from log - done
 # TODO: measure sentences per second while *decoding*
 # TODO: add ensembling support by interpolating probabilities
 # TODO: debug with non-english output (i.e. reverse translation from en to he)
@@ -432,7 +432,7 @@ def train_model(model, encoder, decoder, params, train_inputs, train_outputs, de
                     print 'train loss patience exceeded: {}'.format(train_loss_patience)
                     return model, params, e, best_train_epoch
 
-            if i % 500 == 0 and i > 0:
+            if total_batches % 1000 == 0 and total_batches > 0:
                 print 'epoch {}: {} batches out of {} ({} examples out of {}) total: {} batches, {} examples. avg \
 loss per example: {}'.format(e,
                              i,

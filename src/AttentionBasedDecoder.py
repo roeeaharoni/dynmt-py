@@ -76,9 +76,17 @@ class AttentionBasedDecoder:
 
     # Luong et. al 2015 attention mechanism:
     def attend(self, encoded_inputs, h_t, input_masks=None):
-        # blstm_outputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size
-        # if arguments['--last-state']:
-        #     encoded_inputs = [encoded_inputs[-1]]
+        # encoded_inputs dimension is: seq len x 2*h x batch size, h_t dimension is h x batch size (for bilstm encoder)
+        if len(encoded_inputs) == 1:
+            # no need to attend if only one input state, compute output directly
+            h_output = dn.tanh(self.w_c * dn.concatenate([h_t, encoded_inputs[0]]))
+            # return trivial alphas (all 1's since one input gets all attention)
+            if input_masks:
+                # if batching
+                alphas = dn.inputTensor([1]*len(input_masks[0]), batched=True)
+            else:
+                alphas = dn.inputTensor([1], batched=True)
+            return h_output, alphas
 
         # iterate through input states to compute attention scores
         # scores = [v_a * dn.tanh(w_a * h_t + u_a * h_input) for h_input in blstm_outputs]
@@ -93,15 +101,6 @@ class AttentionBasedDecoder:
 
         # normalize scores
         alphas = dn.softmax(concatenated)
-
-        # print "MASKS"
-        # print dn_masks.npvalue()
-        # print "SCORES"
-        # print concatenated.npvalue()
-        # print "MASKED SCORES"
-        # print masked_scores.npvalue()
-        # scores dim is seqlen x batch_size
-        # print 'scores size (for single step): ' + str(concatenated.npvalue().shape)
 
         # compute context vector with weighted sum for each seq in batch
         bo = dn.concatenate_cols(encoded_inputs)
