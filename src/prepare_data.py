@@ -72,6 +72,8 @@ def load_parallel_data(input_seqs_path, output_seqs_path, vocab_size, max_seq_le
             print 'max output len is {}, avg output len is {}'.format(max_output_len, total_output_len / float(amount))
 
     # build a vocabulary from the most common symbols
+    print 'building vocabulary...'
     most_common_input = [ite for ite, it in Counter(input_vocab).most_common(vocab_size)]
     most_common_output = [ite for ite, it in Counter(output_vocab).most_common(vocab_size)]
+    print 'done building vocabulary'
     return tokenized_input_seqs, list(set(most_common_input)), tokenized_output_seqs, list(set(most_common_output))
