@@ -22,16 +22,21 @@ class MaxPoolEncoder:
         return [max_output], max_masks
 
     def values_per_input(self, encoded_inputs, input_seq_batch, max_output):
+        # get the value of the max-pooled vector
         max = max_output.value()
+
+        # get the value for each bilstm output
         vals = []
-        hist = defaultdict(int)
         for i, input in enumerate(encoded_inputs):
             v = input.value()
             vals.append(v)
+
+        hist = defaultdict(int)
         for i, max_val in enumerate(max):
             for j, vec in enumerate(vals):
                 if math.fabs(max_val - vec[i]) < 0.000000000000001:
                     hist[j] += 1
+
         print '\n'
         print 'seq:' + str(input_seq_batch[0])
         print 'selected in position: '

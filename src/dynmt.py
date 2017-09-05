@@ -178,7 +178,8 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     if len(predicted_sequences) > 0:
 
         # evaluate the test predictions
-        amount, accuracy = evaluate_model(predicted_sequences, test_inputs, test_outputs, print_results=False)
+        amount, accuracy = evaluate(predicted_sequences, test_inputs, test_outputs, print_results=False,
+                                    predictions_file_path=results_file_path + '.test.predictions')
         print 'test bleu: {}% '.format(accuracy)
 
         final_results = []
@@ -455,7 +456,8 @@ loss per example: {}'.format(e,
 
                 print 'starting checkpoint evaluation'
                 dev_bleu, dev_loss = checkpoint_eval(encoder, decoder, params, dev_batch_size, dev_data, dev_inputs,
-                                                     dev_len, dev_order, dev_outputs, int2y, y2int)
+                                                     dev_len, dev_order, dev_outputs, int2y, y2int,
+                                                     results_file_path=results_file_path)
 
                 log_to_file(log_path, e, total_batches, avg_train_loss, dev_loss, dev_bleu)
                 save_model(model, results_file_path, total_batches, models_to_save=int(arguments['--models-to-save']))
@@ -519,7 +521,7 @@ best dev bleu {4:.4f} (epoch {5}) patience = {6}'.format(
 
 
 def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, dev_len, dev_order, dev_outputs, int2y,
-                    y2int):
+                    y2int, results_file_path=None):
 
     # TODO: could be more efficient - now "encoding" (lookup) the dev set twice (for predictions and loss)
     print 'predicting on dev...'
@@ -527,7 +529,8 @@ def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, 
     dev_predictions = predict_multiple_sequences(params, encoder, decoder, y2int, int2y, dev_inputs)
     print 'calculating dev bleu...'
     # get dev accuracy
-    dev_bleu = evaluate_model(dev_predictions, dev_inputs, dev_outputs, print_results=True)[1]
+    dev_bleu = evaluate(dev_predictions, dev_inputs, dev_outputs, print_results=True,
+                        predictions_file_path=results_file_path+'.dev.predictions')[1]
 
     # get dev loss
     print 'computing dev loss...'
@@ -661,7 +664,7 @@ def predict_multiple_sequences(params, encoder, decoder, y2int, int2y, inputs):
     return predictions
 
 
-def evaluate_model(predicted_sequences, inputs, outputs, print_results=False):
+def evaluate(predicted_sequences, inputs, outputs, print_results=False, predictions_file_path=None):
     if print_results:
         print 'evaluating model...'
 
@@ -687,7 +690,7 @@ def evaluate_model(predicted_sequences, inputs, outputs, print_results=False):
         eval_predictions.append(enc_out.decode('utf8'))
         eval_golds.append(enc_gold.decode('utf8'))
 
-    bleu = common.evaluate_bleu(eval_golds, eval_predictions)
+    bleu = common.evaluate_bleu(eval_golds, eval_predictions, predictions_file_path=predictions_file_path)
 
     if print_results:
         print 'finished evaluating model. bleu: {}\n\n'.format(bleu)
