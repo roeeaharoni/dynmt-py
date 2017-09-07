@@ -59,12 +59,12 @@ def write_results_files(output_file_path, final_results):
 # evaluates bleu over two lists of unicode strings (u'')
 def evaluate_bleu(gold, predictions, predictions_file_path=None):
     if not predictions_file_path:
-        predictions_path = os.path.dirname(__file__) + '/predictions.tmp'
+        predictions_file_path = os.path.dirname(__file__) + '/predictions.tmp'
         gold_path = os.path.dirname(__file__) + '/gold.tmp'
     else:
         gold_path = predictions_file_path + '.gold'
 
-    with codecs.open(predictions_path, 'w', encoding='utf8') as predictions_file:
+    with codecs.open(predictions_file_path, 'w', encoding='utf8') as predictions_file:
         for i, line in enumerate(predictions):
             predictions_file.write(u'{}\n'.format(line))
 
@@ -72,8 +72,8 @@ def evaluate_bleu(gold, predictions, predictions_file_path=None):
         for i, line in enumerate(gold):
             gold_file.write(u'{}\n'.format(line))
 
-    print 'evaluating {} vs. {}'.format(predictions_path, gold_path)
-    bleu = evaluate_bleu_from_files(gold_path, predictions_path)
+    print 'evaluating {} vs. {}'.format(predictions_file_path, gold_path)
+    bleu = evaluate_bleu_from_files(gold_path, predictions_file_path)
     # os.remove(predictions_path)
     # os.remove(gold_path)
     return bleu
