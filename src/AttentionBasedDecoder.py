@@ -2,6 +2,8 @@ import dynet as dn
 import numpy as np
 import common
 
+DIVERSE = False
+
 
 class AttentionBasedDecoder:
     def __init__(self, y2int, int2y, params, max_prediction_len, plot, beam_size):
@@ -50,10 +52,16 @@ class AttentionBasedDecoder:
 
             # compute output scores (returns vocab_size x batch size matrix)
             # h = readout * attention_output_vector + bias
-            h = dn.affine_transform([self.bias, self.readout, attention_output_vector])
+            h = dn.tanh(dn.affine_transform([self.bias, self.readout, attention_output_vector]))
 
             # get batch loss for this timestep
             batch_loss = dn.pickneglogsoftmax_batch(h, step_word_ids)
+
+            # encourage diversity by punishing highly confident predictions
+            if DIVERSE:
+                soft = dn.softmax(h)
+                batch_loss = dn.pick_batch(-dn.log(soft), step_word_ids) \
+                    - dn.log(dn.scalarInput(1) - dn.pick_batch(soft, step_word_ids)) - dn.log(dn.scalarInput(4))
 
             # mask the loss if at least one sentence is shorter
             if output_masks and output_masks[i][-1] != 1:
@@ -72,6 +80,7 @@ class AttentionBasedDecoder:
 
         # sum the loss over the time steps and batch
         total_batch_loss = dn.sum_batches(dn.esum(losses))
+
         return total_batch_loss
 
     # Luong et. al 2015 attention mechanism:
