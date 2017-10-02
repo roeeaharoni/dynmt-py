@@ -4,9 +4,9 @@ import codecs
 # generate toy parallel sequences: characters to numbers
 def main():
     ordered = True
-    lines = 1000
-    input_file_path = '../data/toy/input_ordered.txt'
-    output_file_path = '../data/toy/output_ordered.txt'
+    lines = 500
+    input_file_path = '../data/toy/input_ordered_test.txt'
+    output_file_path = '../data/toy/output_ordered_test.txt'
     with codecs.open(input_file_path, 'w', encoding='utf8') as input:
         with codecs.open(output_file_path, 'w', encoding='utf8') as output:
             for i in xrange(lines):

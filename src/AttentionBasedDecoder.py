@@ -2,11 +2,9 @@ import dynet as dn
 import numpy as np
 import common
 
-DIVERSE = False
-
 
 class AttentionBasedDecoder:
-    def __init__(self, y2int, int2y, params, max_prediction_len, plot, beam_size):
+    def __init__(self, y2int, int2y, params, max_prediction_len, plot, beam_size, diverse = False):
         self.y2int = y2int
         self.int2y = int2y
         self.decoder_rnn = params['decoder_rnn']
@@ -16,6 +14,7 @@ class AttentionBasedDecoder:
         self.plot = plot
         self.beam_size = beam_size
         self.params = params
+        self.diverse = diverse
 
     def compute_decoder_batch_loss(self, encoded_inputs, input_masks, output_word_ids, output_masks, batch_size):
         self.readout = dn.parameter(self.params['readout'])
@@ -52,16 +51,17 @@ class AttentionBasedDecoder:
 
             # compute output scores (returns vocab_size x batch size matrix)
             # h = readout * attention_output_vector + bias
-            h = dn.tanh(dn.affine_transform([self.bias, self.readout, attention_output_vector]))
-
-            # get batch loss for this timestep
-            batch_loss = dn.pickneglogsoftmax_batch(h, step_word_ids)
+            h = dn.affine_transform([self.bias, self.readout, attention_output_vector])
 
             # encourage diversity by punishing highly confident predictions
-            if DIVERSE:
-                soft = dn.softmax(h)
+            # TODO: support batching - esp. w.r.t. scalar inputs
+            if self.diverse:
+                soft = dn.softmax(dn.tanh(h))
                 batch_loss = dn.pick_batch(-dn.log(soft), step_word_ids) \
                     - dn.log(dn.scalarInput(1) - dn.pick_batch(soft, step_word_ids)) - dn.log(dn.scalarInput(4))
+            else:
+                # get batch loss for this timestep
+                batch_loss = dn.pickneglogsoftmax_batch(h, step_word_ids)
 
             # mask the loss if at least one sentence is shorter
             if output_masks and output_masks[i][-1] != 1:
@@ -165,6 +165,10 @@ class AttentionBasedDecoder:
             # compute output probabilities
             # h = readout * attention_output_vector + bias
             h = dn.affine_transform([self.bias, self.readout, attention_output_vector])
+
+            # TODO: understand why diverse needs tanh before softmax
+            if self.diverse:
+                h = dn.tanh(h)
             probs = dn.softmax(h)
 
             # find best candidate output - greedy
@@ -247,6 +251,10 @@ class AttentionBasedDecoder:
                 # compute output probabilities
                 # h = readout * attention_output_vector + bias
                 h = dn.affine_transform([self.bias, self.readout, attention_output_vector])
+
+                # TODO: understand why diverse needs tanh before softmax
+                if self.diverse:
+                    h = dn.tanh(h)
                 probs = dn.softmax(h)
                 probs_val = probs.npvalue()
 

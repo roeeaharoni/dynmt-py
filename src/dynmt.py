@@ -7,7 +7,7 @@ Usage:
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED] [--compact]
-  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] [--models-to-save=SAVE] [--max] TRAIN_INPUTS_PATH
+  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] [--models-to-save=SAVE] [--max] [--diverse] TRAIN_INPUTS_PATH
   TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
@@ -48,6 +48,7 @@ Options:
   --compact                     use compact lstm builder
   --models-to-save=SAVE         amount of models to save during training [default: 10]
   --max                         use MaxPooling encoder
+  --diverse                     symmetric diverse loss
 """
 
 import numpy as np
@@ -151,8 +152,13 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
         encoder = BiLSTMEncoder.BiLSTMEncoder(x2int, params)
         print 'using BiLSTMEncoder...'
 
+    if arguments['--diverse']:
+        diverse = True
+    else:
+        diverse = False
+
     decoder = AttentionBasedDecoder.AttentionBasedDecoder(y2int, int2y, params, max_prediction_len, plot_param,
-                                                          beam_param)
+                                                          beam_param, diverse)
 
     # train the model
     if not eval_only:
@@ -173,6 +179,7 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
                                                              int2y, ensemble, hidden_dim, input_dim, layers,
                                                              test_inputs, test_outputs)
     else:
+        # TODO: load best model from disk before test eval in case training was performed
         # predict test set using a single model
         predicted_sequences = predict_multiple_sequences(params, encoder, decoder, y2int, int2y, test_inputs)
     if len(predicted_sequences) > 0:
