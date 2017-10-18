@@ -28,7 +28,7 @@ Options:
   --input-dim=INPUT             input embeddings dimension [default: 300]
   --hidden-dim=HIDDEN           LSTM hidden layer dimension [default: 100]
   --epochs=EPOCHS               amount of training epochs [default: 1]
-  --layers=LAYERS               amount of layers in LSTM [default: 1]
+  --lstm-layers=LAYERS          amount of layers in LSTM [default: 1]
   --optimization=OPTIMIZATION   chosen optimization method (ADAM/SGD/ADAGRAD/MOMENTUM/ADADELTA) [default: ADADELTA]
   --reg=REGULARIZATION          regularization parameter for optimization [default: 0]
   --learning=LEARNING           learning rate parameter for optimization [default: 0.0001]
