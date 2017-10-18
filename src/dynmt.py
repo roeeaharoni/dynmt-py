@@ -295,8 +295,8 @@ def build_model(input_vocabulary, output_vocabulary, input_dim, hidden_dim, laye
     params['output_lookup'] = model.add_lookup_parameters((len(output_vocabulary), input_dim))
 
     # used in softmax output
-    params['readout'] = model.add_parameters((len(input_vocabulary), 3 * hidden_dim))
-    params['bias'] = model.add_parameters(len(input_vocabulary))
+    params['readout'] = model.add_parameters((len(output_vocabulary), 3 * hidden_dim))
+    params['bias'] = model.add_parameters(len(output_vocabulary))
 
     # rnn's
     if bool(arguments['--compact']):
@@ -372,7 +372,6 @@ def train_model(model, encoder, decoder, params, train_inputs, train_outputs, de
     train_loss_patience_threshold = 99999999
     max_patience = int(arguments['--max-patience'])
     log_path = results_file_path + '_log.txt'
-
     start_epoch, checkpoints_x, train_loss_y, dev_loss_y, dev_accuracy_y = read_from_log(log_path)
 
     if len(train_loss_y) > 0:
@@ -588,7 +587,7 @@ def read_from_log(log_path):
     train_loss_y = []
     dev_loss_y = []
     dev_accuracy_y = []
-    if os.path.isfile(log_path):
+    if os.path.isfile(log_path) and not arguments['--override']:
         with open(log_path, "r") as logfile:
             line = logfile.readline()
             while line:
@@ -650,7 +649,7 @@ def predict_multiple_sequences(params, encoder, decoder, y2int, int2y, inputs):
                               results_file_path_param, int(time.time())))
         if beam_param > 1:
             # take 1-best result
-            nbest, alphas_mtx = decoder.predict_beamsearch(params, encoder, input_seq, y2int, int2y)
+            nbest, alphas_mtx = decoder.predict_beamsearch(encoder, input_seq)
 
             # best hypothesis, sequence without probability
             predicted_seq = nbest[0][0]
