@@ -15,9 +15,10 @@ Options:
 Name|Description
 --- | ---
   -h --help        |             shows a help message and exits
-  --dynet-mem MEM      |         allocates MEM bytes for dynet
-  --dynet-gpu-ids IDS  |         GPU ids to use
-  --dynet-autobatch AUTO   |     switch auto-batching on
+  --dynet-mem MEM      |         allocates MEM bytes for dynet (see dynet's documentation for more details)
+  --dynet-gpus GPUS  |           how many gpus to use (see dynet's documentation for more details)
+  --dynet-devices DEV |          CPU/GPU ids to use (see dynet's documentation for more details)
+  --dynet-autobatch AUTO   |     switch auto-batching on (see dynet's documentation for more details)
   --input-dim=INPUT      |       input embeddings dimension [default: 300]
   --hidden-dim=HIDDEN     |      LSTM hidden layer dimension [default: 100]
   --epochs=EPOCHS         |      amount of training epochs [default: 1]
