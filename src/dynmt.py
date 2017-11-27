@@ -7,7 +7,7 @@ Usage:
   [--hidden-dim=HIDDEN] [--epochs=EPOCHS] [--lstm-layers=LAYERS] [--optimization=OPTIMIZATION] [--reg=REGULARIZATION]
   [--batch-size=BATCH] [--beam-size=BEAM] [--learning=LEARNING] [--plot] [--override] [--eval] [--ensemble=ENSEMBLE]
   [--vocab-size=VOCAB] [--eval-after=EVALAFTER] [--max-len=MAXLEN] [--last-state] [--max-pred=MAXPRED] [--compact]
-  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] [--models-to-save=SAVE] [--max] [--diverse] TRAIN_INPUTS_PATH
+  [--grad-clip=GRADCLIP] [--max-patience=MAXPATIENCE] [--models-to-save=SAVE] [--max] [--diverse] [--eval-script=EVALSCRIPT] TRAIN_INPUTS_PATH
   TRAIN_OUTPUTS_PATH DEV_INPUTS_PATH DEV_OUTPUTS_PATH TEST_INPUTS_PATH TEST_OUTPUTS_PATH RESULTS_PATH...
 
 Arguments:
@@ -49,13 +49,16 @@ Options:
   --models-to-save=SAVE         amount of models to save during training [default: 10]
   --max                         use MaxPooling encoder
   --diverse                     symmetric diverse loss
+  --eval-script=EVALSCRIPT      evaluation script path
 """
 
+import subprocess
 import numpy as np
 import random
 import glob
 import prepare_data
 import progressbar
+import codecs
 import time
 import os
 import common
@@ -78,11 +81,14 @@ from matplotlib import pyplot as plt
 # OOP refactoring for encoder/decoder - done
 # continue logging from last saved checkpoint values - done
 # write saved checkpoint metadata to file: epoch, update, best score, best perplexity - taking from log - done
+# add support for external evaluation (dev) script - done
+# TODO: add support for external *test* script
 # TODO: measure sentences per second while *decoding*
 # TODO: add ensembling support by interpolating probabilities
 # TODO: debug with non-english output (i.e. reverse translation from en to he)
 # TODO: print n-best lists to file
-# TODO: carefully rename model parameters the same way they are named in a specific paper
+# TODO: carefully refactor/rename model parameters the same way they are named in a specific paper
+# TODO: fix bug where a fully trained model does one epoch after being loaded
 
 
 def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_path, test_inputs_path, test_outputs_path,
@@ -175,28 +181,39 @@ def main(train_inputs_path, train_outputs_path, dev_inputs_path, dev_outputs_pat
     # evaluate using an ensemble
     if ensemble:
         # predict test set using ensemble majority
-        predicted_sequences = predict_with_ensemble_majority(input_vocabulary, output_vocabulary, x2int, y2int,
+        predicted_test_sequences = predict_with_ensemble_majority(input_vocabulary, output_vocabulary, x2int, y2int,
                                                              int2y, ensemble, hidden_dim, input_dim, layers,
                                                              test_inputs, test_outputs)
     else:
         # TODO: load best model from disk before test eval in case training was performed
         # predict test set using a single model
-        predicted_sequences = predict_multiple_sequences(params, encoder, decoder, y2int, int2y, test_inputs)
-    if len(predicted_sequences) > 0:
+        predicted_test_sequences = predict_multiple_sequences(params, encoder, decoder, y2int, int2y, test_inputs)
 
-        # evaluate the test predictions
-        amount, accuracy = evaluate(predicted_sequences, test_inputs, test_outputs, print_results=False,
-                                    predictions_file_path=results_file_path + '.test.predictions')
-        print 'test bleu: {}% '.format(accuracy)
+    if len(predicted_test_sequences) > 0:
+        # convert predicted sequences to strings for external evaluation
+        test_gold_strings, test_predictions_strings = seqs2strings(test_inputs, test_outputs,
+                                                                   predicted_test_sequences,
+                                                                   print_results=False)
 
-        final_results = []
-        for i in xrange(len(test_outputs)):
-            index = ' '.join(test_inputs[i])
-            final_output = ' '.join(predicted_sequences[index])
-            final_results.append(final_output)
+        # write predictions to file
+        predictions_file_path = results_file_path + '.test.predictions'
+        with codecs.open(predictions_file_path, 'w', encoding='utf8') as predictions_file:
+            for i, line in enumerate(test_predictions_strings):
+                predictions_file.write(u'{}\n'.format(line))
 
-        # write output files
-        common.write_results_files(results_file_path, final_results)
+        if '--test-script' in arguments:
+            proc = subprocess.Popen([arguments['--test-script']], stdout=subprocess.PIPE, shell=True)
+            (out, err) = proc.communicate()
+            print "external eval script test score:", out
+            test_bleu = float(out)
+        else:
+            # get test accuracy with default script
+            test_bleu = common.evaluate_bleu_from_files(arguments['TEST_OUTPUTS_PATH'], predictions_file_path)
+            print "default eval script test score:", test_bleu
+
+        print 'test bleu: {}% '.format(test_bleu)
+    else:
+        print 'no test predictions found'
 
     return
 
@@ -531,12 +548,34 @@ def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, 
 
     # TODO: could be more efficient - now "encoding" (lookup) the dev set twice (for predictions and loss)
     print 'predicting on dev...'
+
     # get dev predictions
     dev_predictions = predict_multiple_sequences(params, encoder, decoder, y2int, int2y, dev_inputs)
     print 'calculating dev bleu...'
-    # get dev accuracy
-    dev_bleu = evaluate(dev_predictions, dev_inputs, dev_outputs, print_results=True,
-                        predictions_file_path=results_file_path+'.dev.predictions')[1]
+
+    print_results = True
+    if print_results:
+        print 'evaluating model...'
+
+    # convert predicted sequences to strings for external evaluation
+    dev_gold_strings, dev_predictions_strings = seqs2strings(dev_inputs, dev_outputs, dev_predictions, print_results)
+
+    # write predictions to file
+    predictions_file_path = results_file_path + '.dev.predictions'
+    with codecs.open(predictions_file_path, 'w', encoding='utf8') as predictions_file:
+        for i, line in enumerate(dev_predictions_strings):
+            predictions_file.write(u'{}\n'.format(line))
+
+    if arguments['--eval-script']:
+        proc = subprocess.Popen([arguments['--eval-script']], stdout=subprocess.PIPE, shell=True)
+        (out, err) = proc.communicate()
+        print "external eval script dev score:", out
+        dev_bleu = float(out)
+    else:
+        # get dev accuracy
+        dev_bleu = common.evaluate_bleu_from_files(arguments['DEV_OUTPUTS_PATH'], predictions_file_path)
+        print "default eval script dev score:", dev_bleu
+
 
     # get dev loss
     print 'computing dev loss...'
@@ -566,6 +605,30 @@ def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, 
     avg_dev_loss = total_dev_loss / float(len(dev_inputs))
 
     return dev_bleu, avg_dev_loss
+
+
+def seqs2strings(dev_input_seqs, dev_output_seqs, dev_predictions, print_results):
+    # write predictions to files
+    eval_predictions = []
+    eval_golds = []
+    # go through the parallel sequence pairs
+    for i, (input_seq, output_seq) in enumerate(zip(dev_input_seqs, dev_output_seqs)):
+        index = ' '.join(input_seq)
+        predicted_output = ' '.join(dev_predictions[index])
+
+        # create strings from sequences for debug prints and evaluation
+        enc_in = ' '.join(input_seq).encode('utf8')
+        enc_gold = ' '.join(output_seq).encode('utf8')
+        enc_out = predicted_output.encode('utf8')
+
+        if print_results:
+            print 'input: {}'.format(enc_in)
+            print 'gold output: {}'.format(enc_gold)
+            print 'prediction: {}\n'.format(enc_out)
+
+        eval_predictions.append(enc_out.decode('utf8'))
+        eval_golds.append(enc_gold.decode('utf8'))
+    return eval_golds, eval_predictions
 
 
 def log_to_file(file_name, epoch, total_updates, train_loss, dev_loss, dev_accuracy):
@@ -668,40 +731,6 @@ def predict_multiple_sequences(params, encoder, decoder, y2int, int2y, inputs):
         predictions[index] = predicted_seq
 
     return predictions
-
-
-def evaluate(predicted_sequences, inputs, outputs, print_results=False, predictions_file_path=None):
-    if print_results:
-        print 'evaluating model...'
-
-    test_data = zip(inputs, outputs)
-    eval_predictions = []
-    eval_golds = []
-
-    # go through the parallel sequence pairs
-    for i, (input_seq, output_seq) in enumerate(test_data):
-        index = ' '.join(input_seq)
-        predicted_output = ' '.join(predicted_sequences[index])
-
-        # create strings from sequences for debug prints and evaluation
-        enc_in = ' '.join(input_seq).encode('utf8')
-        enc_gold = ' '.join(output_seq).encode('utf8')
-        enc_out = predicted_output.encode('utf8')
-
-        if print_results:
-            print 'input: {}'.format(enc_in)
-            print 'gold output: {}'.format(enc_gold)
-            print 'prediction: {}\n'.format(enc_out)
-
-        eval_predictions.append(enc_out.decode('utf8'))
-        eval_golds.append(enc_gold.decode('utf8'))
-
-    bleu = common.evaluate_bleu(eval_golds, eval_predictions, predictions_file_path=predictions_file_path)
-
-    if print_results:
-        print 'finished evaluating model. bleu: {}\n\n'.format(bleu)
-
-    return len(predicted_sequences), bleu
 
 
 def plot_attn_weights(encoder, decoder, input_seq, filename=None):

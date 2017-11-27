@@ -46,38 +46,6 @@ def write_model_config_file(hyper_params, train_inputs_path, train_outputs_path,
         for param in hyper_params:
             f.write(param + ' = ' + str(hyper_params[param]) + '\n')
 
-def write_results_files(output_file_path, final_results):
-
-    # write predictions
-    predictions_path = output_file_path + '.predictions'
-    with codecs.open(predictions_path, 'w', encoding='utf8') as predictions:
-        for i, line in enumerate(final_results):
-            predictions.write(u'{}\n'.format(line))
-
-    return predictions_path
-
-# evaluates bleu over two lists of unicode strings (u'')
-def evaluate_bleu(gold, predictions, predictions_file_path=None):
-    if not predictions_file_path:
-        predictions_file_path = os.path.dirname(__file__) + '/predictions.tmp'
-        gold_path = os.path.dirname(__file__) + '/gold.tmp'
-    else:
-        gold_path = predictions_file_path + '.gold'
-
-    with codecs.open(predictions_file_path, 'w', encoding='utf8') as predictions_file:
-        for i, line in enumerate(predictions):
-            predictions_file.write(u'{}\n'.format(line))
-
-    with codecs.open(gold_path, 'w', encoding='utf8') as gold_file:
-        for i, line in enumerate(gold):
-            gold_file.write(u'{}\n'.format(line))
-
-    print 'evaluating {} vs. {}'.format(predictions_file_path, gold_path)
-    bleu = evaluate_bleu_from_files(gold_path, predictions_file_path)
-    # os.remove(predictions_path)
-    # os.remove(gold_path)
-    return bleu
-
 
 def evaluate_bleu_from_files(gold_outputs_path, output_file_path):
     os.chdir(os.path.dirname(__file__))
