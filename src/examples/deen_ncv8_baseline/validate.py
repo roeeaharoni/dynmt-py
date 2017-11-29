@@ -4,7 +4,7 @@ import src.common as common
 def main():
     # base_path = '/Users/roeeaharoni'
     base_path = '/home/nlp/aharonr6'
-    dev_target = base_path + '/git/dynet-seq2seq-attn/results/deen_ncv8_baseline.dev.predictions'
+    dev_target = base_path + '/git/dynet-seq2seq-attn/results/deen_ncv8_baseline/deen_ncv8_baseline.dev.predictions'
     postprocess_command = '{}/git/phrasing/src/nmt_scripts/nematus/postprocess-en.sh < {} > {}.postprocessed 2> /dev/null'.format(
         base_path,
         dev_target,

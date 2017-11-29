@@ -82,6 +82,7 @@ from matplotlib import pyplot as plt
 # continue logging from last saved checkpoint values - done
 # write saved checkpoint metadata to file: epoch, update, best score, best perplexity - taking from log - done
 # add support for external evaluation (dev) script - done
+# TODO: regression test - try to be comparable to marian results
 # TODO: add support for external *test* script
 # TODO: measure sentences per second while *decoding*
 # TODO: add ensembling support by interpolating probabilities
