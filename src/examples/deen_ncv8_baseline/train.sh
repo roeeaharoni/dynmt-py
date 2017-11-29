@@ -8,7 +8,7 @@ export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 
 python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
---dynet-devices GPU:0
+--dynet-devices GPU:0 \
 --dynet-mem 10000 \
 --input-dim=512 \
 --hidden-dim=1024 \
