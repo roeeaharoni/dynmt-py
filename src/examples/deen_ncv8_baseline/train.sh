@@ -10,13 +10,14 @@ export LANG=en_US.UTF-8
 python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --dynet-devices GPU:1 \
 --dynet-mem 10000 \
---input-dim=512 \
---hidden-dim=1024 \
+--input-dim=256 \
+--hidden-dim=512 \
 --epochs=100 \
 --lstm-layers=1 \
 --optimization=ADAM \
 --batch-size=32 \
 --beam-size=1 \
+--max-length=999
 --plot \
 --eval-script=$base_path/git/dynet-seq2seq-attn/src/examples/deen_ncv8_baseline/validate.sh \
 $base_path/git/research/string-to-tree-nmt/data/news-de-en/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.de \
