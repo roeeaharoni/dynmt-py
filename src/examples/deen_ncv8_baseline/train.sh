@@ -9,7 +9,7 @@ export LANG=en_US.UTF-8
 
 python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --dynet-devices GPU:1 \
---dynet-mem 10000 \
+--dynet-mem 12000 \
 --input-dim=256 \
 --hidden-dim=512 \
 --epochs=100 \
