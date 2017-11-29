@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#install_name_tool -change libboost_program_options.dylib /Users/roeeaharoni/boost_1_55_0/stage/lib/libboost_program_options.dylib /Users/roeeaharoni/git/dynet/build/dynet/libdynet.dylib
+#install_name_tool -change libboost_serialization.dylib /Users/roeeaharoni/boost_1_55_0/stage/lib/libboost_serialization.dylib /Users/roeeaharoni/git/dynet/build/dynet/libdynet.dylib
+base_path=/home/nlp/aharonr6
+#base_path=/Users/roeeaharoni
+
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
+--dynet-mem 10000 \
+--input-dim=512 \
+--hidden-dim=1024 \
+--epochs=100 \
+--lstm-layers=1 \
+--optimization=ADAM \
+--batch-size=32 \
+--beam-size=1 \
+--plot \
+--eval-script=/Users/roeeaharoni/git/dynet-seq2seq-attn/src/examples/deen_ncv8_baseline/validate.sh \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.de \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.en \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.de \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.en \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2016-deen.tok.penntrg.clean.true.bpe.de \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2016-deen.tok.penntrg.clean.true.bpe.en \
+$base_path/git/dynet-seq2seq-attn/results/deen_ncv8_baseline_dynet
+
