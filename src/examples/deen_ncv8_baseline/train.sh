@@ -23,7 +23,7 @@ $base_path/git/research/string-to-tree-nmt/data/news-de-en/train/news-commentary
 $base_path/git/research/string-to-tree-nmt/data/news-de-en/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.en \
 $base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.de \
 $base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.en \
-$base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2016-deen.tok.penntrg.clean.true.bpe.de \
-$base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2016-deen.tok.penntrg.clean.true.bpe.en \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.clean.true.bpe.de \
+$base_path/git/research/string-to-tree-nmt/data/news-de-en/test/newstest2016-deen.tok.penntrg.clean.true.bpe.en \
 $base_path/git/dynet-seq2seq-attn/results/deen_ncv8_baseline_dynet
 
