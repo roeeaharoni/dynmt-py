@@ -18,7 +18,7 @@ python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --batch-size=32 \
 --beam-size=1 \
 --plot \
---eval-script=/Users/roeeaharoni/git/dynet-seq2seq-attn/src/examples/deen_ncv8_baseline/validate.sh \
+--eval-script=$base_path/git/dynet-seq2seq-attn/src/examples/deen_ncv8_baseline/validate.sh \
 $base_path/git/research/string-to-tree-nmt/data/news-de-en/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.de \
 $base_path/git/research/string-to-tree-nmt/data/news-de-en/train/news-commentary-v8.de-en.tok.penntrg.clean.true.bpe.en \
 $base_path/git/research/string-to-tree-nmt/data/news-de-en/dev/newstest2015-deen.tok.penntrg.clean.true.bpe.de \
