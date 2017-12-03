@@ -15,7 +15,7 @@ python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --epochs=100 \
 --lstm-layers=1 \
 --optimization=ADAM \
---batch-size=32 \
+--batch-size=64 \
 --beam-size=1 \
 --max-len=50 \
 --plot \
