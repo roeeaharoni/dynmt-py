@@ -13,7 +13,7 @@ python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --input-dim=256 \
 --hidden-dim=512 \
 --epochs=100 \
---eval-after=10000 \
+--eval-after=5000 \
 --lstm-layers=1 \
 --optimization=ADAM \
 --batch-size=64 \
