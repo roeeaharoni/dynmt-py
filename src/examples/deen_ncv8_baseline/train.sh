@@ -17,7 +17,7 @@ python $base_path/git/dynet-seq2seq-attn/src/dynmt.py \
 --lstm-layers=1 \
 --optimization=ADAM \
 --batch-size=64 \
---beam-size=1 \
+--beam-size=12 \
 --max-len=50 \
 --plot \
 --eval-script=$base_path/git/dynet-seq2seq-attn/src/examples/deen_ncv8_baseline/validate.sh \
