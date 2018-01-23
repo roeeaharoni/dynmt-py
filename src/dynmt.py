@@ -429,10 +429,6 @@ def train_model(model, encoder, decoder, params, train_inputs, train_outputs, de
                 continue
 
             # compute batch loss
-
-            # debug prints for batch seq lengths
-            # print 'batch {} seq lens'.format(i)
-            # print [len(s) for s in batch_inputs]
             loss = compute_batch_loss(encoder, decoder, batch_inputs, batch_outputs, y2int)
 
             # forward pass
@@ -533,9 +529,11 @@ best dev bleu {4:.4f} (epoch {5}) patience = {6}'.format(
 
     # update progress bar after completing training
     train_progress_bar.finish()
+
     if plot:
         # clear plot when done
         plt.cla()
+
     print 'finished training. average loss: {} best epoch on dev: {} best epoch on train: {}'.format(
         str(avg_train_loss),
         best_dev_epoch,
@@ -577,7 +575,6 @@ def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, 
         dev_bleu = common.evaluate_bleu_from_files(arguments['DEV_OUTPUTS_PATH'], predictions_file_path)
         print "default eval script dev score:", dev_bleu
 
-
     # get dev loss
     print 'computing dev loss...'
     total_dev_loss = 0
@@ -590,10 +587,6 @@ def checkpoint_eval(encoder, decoder, params, batch_size, dev_data, dev_inputs, 
         # skip empty batches
         if len(batch_inputs) == 0 or len(batch_inputs[0]) == 0:
             continue
-
-        # TODO: remove
-        # print 'dev batch {}'.format(i)
-        # print 'batch sent len {}'.format(len(batch_inputs[0]))
 
         loss = compute_batch_loss(encoder, decoder, batch_inputs, batch_outputs, y2int)
         total_dev_loss += loss.value()
@@ -612,6 +605,7 @@ def seqs2strings(dev_input_seqs, dev_output_seqs, dev_predictions, print_results
     # write predictions to files
     eval_predictions = []
     eval_golds = []
+
     # go through the parallel sequence pairs
     for i, (input_seq, output_seq) in enumerate(zip(dev_input_seqs, dev_output_seqs)):
         index = ' '.join(input_seq)
@@ -687,7 +681,7 @@ def compute_batch_loss(encoder, decoder, batch_input_seqs, batch_output_seqs, y2
     batch_size = len(batch_input_seqs)
 
     # encode batch with bilstm encoder: each element represents one step in time, and is a matrix of 2*h x batch size
-    # for example, for sentence length of 12, blstm_outputs wil be: 12 x 2 x 100 x 16
+    # for example, for sentence length of 12, blstm_outputs will be: 12 x 2 x 100 x 16
     # note: also adding begin_seq, end_seq symbols here!
     encoded_inputs, input_masks = encoder.encode_batch(batch_input_seqs)
 
@@ -740,6 +734,7 @@ def plot_attn_weights(encoder, decoder, input_seq, filename=None):
     fig, ax = plt.subplots()
 
     image = np.array(alphas_mtx)
+
     # noinspection PyUnresolvedReferences
     ax.imshow(image, cmap=plt.cm.Blues, interpolation='nearest')
 
